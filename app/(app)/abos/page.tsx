@@ -10,9 +10,9 @@ const INTERVAL_LABELS: Record<string, string> = {
   yearly: "jährlich",
 };
 
-const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
-  active: "default",
-  paused: "secondary",
+const STATUS_VARIANT: Record<string, "success" | "warning" | "outline"> = {
+  active: "success",
+  paused: "warning",
   cancelled: "outline",
 };
 
@@ -77,12 +77,12 @@ export default async function SubscriptionsListPage() {
             )}
             {categoryName}
           </h2>
-          <div className="divide-y rounded-lg border bg-white">
+          <div className="divide-y divide-white/40 rounded-lg border border-white/40 bg-white/40 shadow-lg shadow-black/5 backdrop-blur-xl">
             {group.items.map((sub) => (
               <Link
                 key={sub.id}
                 href={`/abos/${sub.id}`}
-                className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-zinc-50"
+                className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-white/30"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{sub.name}</p>

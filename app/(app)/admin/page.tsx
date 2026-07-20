@@ -47,7 +47,7 @@ export default async function AdminPage() {
         </CardContent>
       </Card>
 
-      <div className="divide-y rounded-lg border bg-white">
+      <div className="divide-y divide-white/40 rounded-lg border border-white/40 bg-white/40 shadow-lg shadow-black/5 backdrop-blur-xl">
         {(profiles ?? []).map((p) => (
           <div key={p.id} className="flex items-center justify-between gap-4 px-4 py-3">
             <div className="min-w-0 flex-1">

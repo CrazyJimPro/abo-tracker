@@ -61,6 +61,7 @@ export default async function SubscriptionsListPage({
   }
 
   const sortedGroups = [...grouped.entries()].sort((a, b) => a[1].sortOrder - b[1].sortOrder);
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="space-y-6">
@@ -102,8 +103,21 @@ export default async function SubscriptionsListPage({
                   <p className="text-xs text-muted-foreground">
                     {sub.amount.toLocaleString("de-DE", { minimumFractionDigits: 2 })} € ·{" "}
                     {INTERVAL_LABELS[sub.billing_interval] ?? sub.billing_interval}
-                    {sub.next_billing_date &&
-                      ` · nächste: ${new Date(sub.next_billing_date).toLocaleDateString("de-DE")}`}
+                    {sub.next_billing_date && (
+                      <span
+                        className={
+                          sub.status === "active" && sub.next_billing_date < todayStr
+                            ? "font-medium text-destructive"
+                            : ""
+                        }
+                      >
+                        {" · nächste: "}
+                        {new Date(sub.next_billing_date).toLocaleDateString("de-DE")}
+                        {sub.status === "active" &&
+                          sub.next_billing_date < todayStr &&
+                          " (überfällig)"}
+                      </span>
+                    )}
                   </p>
                 </div>
                 <Badge variant={STATUS_VARIANT[sub.status] ?? "outline"}>

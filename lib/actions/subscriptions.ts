@@ -108,3 +108,48 @@ export async function deleteSubscription(subscriptionId: string) {
   revalidatePath("/");
   redirect("/abos");
 }
+
+// Advances an ISO date string (YYYY-MM-DD) by exactly one billing interval.
+// UTC math keeps the calendar date stable regardless of server timezone.
+function advanceBillingDate(date: string, interval: Enums<"billing_interval">): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  switch (interval) {
+    case "weekly":
+      d.setUTCDate(d.getUTCDate() + 7);
+      break;
+    case "monthly":
+      d.setUTCMonth(d.getUTCMonth() + 1);
+      break;
+    case "quarterly":
+      d.setUTCMonth(d.getUTCMonth() + 3);
+      break;
+    case "yearly":
+      d.setUTCFullYear(d.getUTCFullYear() + 1);
+      break;
+  }
+  return d.toISOString().slice(0, 10);
+}
+
+// Records one billing cycle: pushes next_billing_date forward by a single
+// interval. One click = one cycle, so a subscription overdue by N cycles is
+// advanced N clicks (predictable rather than silently skipping missed cycles).
+export async function markBilled(subscriptionId: string) {
+  const supabase = await createClient();
+  const { data: sub } = await supabase
+    .from("subscriptions")
+    .select("next_billing_date, billing_interval")
+    .eq("id", subscriptionId)
+    .single();
+
+  if (!sub?.next_billing_date) return;
+
+  const next = advanceBillingDate(sub.next_billing_date, sub.billing_interval);
+  await supabase
+    .from("subscriptions")
+    .update({ next_billing_date: next })
+    .eq("id", subscriptionId);
+
+  revalidatePath("/abos");
+  revalidatePath(`/abos/${subscriptionId}`);
+  revalidatePath("/");
+}

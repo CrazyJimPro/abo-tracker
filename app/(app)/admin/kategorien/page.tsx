@@ -39,12 +39,12 @@ export default async function CategoriesListPage() {
         <p className="text-sm text-muted-foreground">Noch keine Kategorien angelegt.</p>
       )}
 
-      <div className="divide-y divide-white/40 rounded-lg border border-white/40 bg-white/40 shadow-lg shadow-black/5 backdrop-blur-xl">
+      <div className="divide-y divide-white/40 rounded-lg border border-white/40 bg-white/40 shadow-lg shadow-black/5 backdrop-blur-xl dark:divide-white/10 dark:border-white/10 dark:bg-white/5">
         {(categories ?? []).map((c) => (
           <Link
             key={c.id}
             href={`/admin/kategorien/${c.id}`}
-            className="flex items-center justify-between px-4 py-3 hover:bg-white/30"
+            className="flex items-center justify-between px-4 py-3 hover:bg-white/30 dark:hover:bg-white/10"
           >
             <div className="flex items-center gap-2">
               <span

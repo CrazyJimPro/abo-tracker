@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -15,7 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-40 border-b border-white/40 bg-white/40 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-white/40 bg-white/40 backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
           <nav className="flex items-center gap-6">
             <Link href="/" className="font-semibold">
@@ -24,6 +25,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/abos" className="text-sm text-muted-foreground hover:text-foreground">
               Abos
             </Link>
+            <Link
+              href="/einstellungen"
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Einstellungen
+            </Link>
             {profile?.role === "admin" && (
               <Link href="/admin" className="text-sm text-muted-foreground hover:text-foreground">
                 Admin
@@ -31,6 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             )}
           </nav>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <span className="text-sm text-muted-foreground">{user?.email}</span>
             <form action={signOut}>
               <Button type="submit" variant="outline" size="sm">

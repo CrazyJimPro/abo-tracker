@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CreateUserForm } from "@/components/admin/create-user-form";
@@ -25,11 +26,16 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Userverwaltung</h1>
-        <p className="text-sm text-muted-foreground">
-          Neue Accounts anlegen und Passwörter zurücksetzen.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Userverwaltung</h1>
+          <p className="text-sm text-muted-foreground">
+            Neue Accounts anlegen und Passwörter zurücksetzen.
+          </p>
+        </div>
+        <Link href="/admin/kategorien" className="text-sm text-muted-foreground hover:text-foreground">
+          Kategorien verwalten →
+        </Link>
       </div>
 
       <Card className="max-w-2xl">

@@ -21,6 +21,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/" className="font-semibold">
               Abo-Tracker
             </Link>
+            <Link href="/abos" className="text-sm text-muted-foreground hover:text-foreground">
+              Abos
+            </Link>
             {profile?.role === "admin" && (
               <Link href="/admin" className="text-sm text-muted-foreground hover:text-foreground">
                 Admin

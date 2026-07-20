@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CategoryPieChart } from "@/components/dashboard/category-pie-chart";
 import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/types/database";
 
@@ -24,13 +25,24 @@ export default async function Home() {
 
   const { data: subscriptions } = await supabase
     .from("subscriptions")
-    .select("id, name, amount, billing_interval, next_billing_date")
+    .select("id, name, amount, billing_interval, next_billing_date, categories(name, color)")
     .eq("status", "active")
     .order("next_billing_date", { ascending: true, nullsFirst: false });
 
   const active = subscriptions ?? [];
   const monthlyTotal = active.reduce((sum, s) => sum + s.amount * MONTHLY_FACTOR[s.billing_interval], 0);
   const upcoming = active.filter((s) => s.next_billing_date).slice(0, 5);
+
+  const byCategory = new Map<string, { name: string; color: string; value: number }>();
+  for (const s of active) {
+    const name = s.categories?.name ?? "Ohne Kategorie";
+    const color = s.categories?.color ?? "#94a3b8";
+    const monthly = s.amount * MONTHLY_FACTOR[s.billing_interval];
+    const entry = byCategory.get(name);
+    if (entry) entry.value += monthly;
+    else byCategory.set(name, { name, color, value: monthly });
+  }
+  const chartData = [...byCategory.values()].sort((a, b) => b.value - a.value);
 
   return (
     <div className="space-y-6">
@@ -78,6 +90,18 @@ export default async function Home() {
           </CardContent>
         </Card>
       </div>
+
+      {chartData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Ausgaben nach Kategorie</CardTitle>
+            <CardDescription>Monatlich normalisiert</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CategoryPieChart data={chartData} />
+          </CardContent>
+        </Card>
+      )}
 
       {active.length === 0 ? (
         <p className="text-sm text-muted-foreground">

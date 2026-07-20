@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { updateSubscription, deleteSubscription } from "@/lib/actions/subscriptions";
+import { updateSubscription, deleteSubscription, markBilled } from "@/lib/actions/subscriptions";
 import { SubscriptionForm } from "@/components/subscriptions/subscription-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ export default async function SubscriptionDetailPage({
 
   const updateAction = updateSubscription.bind(null, id);
   const deleteAction = deleteSubscription.bind(null, id);
+  const markBilledAction = markBilled.bind(null, id);
 
   return (
     <div className="space-y-6">
@@ -41,7 +42,14 @@ export default async function SubscriptionDetailPage({
             submitLabel="Speichern"
           />
 
-          <div className="border-t pt-4">
+          <div className="flex items-center gap-2 border-t pt-4">
+            {subscription.next_billing_date && (
+              <form action={markBilledAction}>
+                <Button type="submit" variant="secondary" size="sm">
+                  Abgerechnet
+                </Button>
+              </form>
+            )}
             <form action={deleteAction}>
               <Button type="submit" variant="outline" size="sm">
                 Abo löschen

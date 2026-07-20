@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { CategoryPieChart } from "@/components/dashboard/category-pie-chart";
 import { createClient } from "@/lib/supabase/server";
+import { markBilled } from "@/lib/actions/subscriptions";
 import type { Enums } from "@/types/database";
 
 const MONTHLY_FACTOR: Record<Enums<"billing_interval">, number> = {
@@ -32,6 +34,7 @@ export default async function Home() {
   const active = subscriptions ?? [];
   const monthlyTotal = active.reduce((sum, s) => sum + s.amount * MONTHLY_FACTOR[s.billing_interval], 0);
   const upcoming = active.filter((s) => s.next_billing_date).slice(0, 5);
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   const byCategory = new Map<string, { name: string; color: string; value: number }>();
   for (const s of active) {
@@ -76,15 +79,26 @@ export default async function Home() {
                 Keine Abos mit hinterlegtem Abrechnungsdatum.
               </p>
             ) : (
-              <ul className="space-y-2">
-                {upcoming.map((s) => (
-                  <li key={s.id} className="flex items-center justify-between text-sm">
-                    <span>{s.name}</span>
-                    <span className="text-muted-foreground">
-                      {new Date(s.next_billing_date!).toLocaleDateString("de-DE")}
-                    </span>
-                  </li>
-                ))}
+              <ul className="space-y-1">
+                {upcoming.map((s) => {
+                  const overdue = s.next_billing_date! < todayStr;
+                  return (
+                    <li key={s.id} className="flex items-center justify-between gap-2 text-sm">
+                      <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                      <span
+                        className={overdue ? "font-medium text-destructive" : "text-muted-foreground"}
+                      >
+                        {new Date(s.next_billing_date!).toLocaleDateString("de-DE")}
+                        {overdue && " · überfällig"}
+                      </span>
+                      <form action={markBilled.bind(null, s.id)}>
+                        <Button type="submit" variant="ghost" size="xs">
+                          Abgerechnet
+                        </Button>
+                      </form>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </CardContent>

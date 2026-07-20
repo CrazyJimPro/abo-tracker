@@ -22,12 +22,25 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Gekündigt",
 };
 
-export default async function SubscriptionsListPage() {
+export default async function SubscriptionsListPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ alle?: string }>;
+}) {
+  const { alle } = await searchParams;
+  const showAll = alle === "1";
   const supabase = await createClient();
 
-  const { data: subscriptions, error } = await supabase
+  let query = supabase
     .from("subscriptions")
-    .select("id, name, amount, billing_interval, status, categories(name, color, sort_order)")
+    .select(
+      "id, name, amount, billing_interval, status, next_billing_date, categories(name, color, sort_order)"
+    );
+
+  if (!showAll) query = query.neq("status", "cancelled");
+
+  const { data: subscriptions, error } = await query
+    .order("next_billing_date", { ascending: true, nullsFirst: false })
     .order("name");
 
   const grouped = new Map<
@@ -89,6 +102,8 @@ export default async function SubscriptionsListPage() {
                   <p className="text-xs text-muted-foreground">
                     {sub.amount.toLocaleString("de-DE", { minimumFractionDigits: 2 })} € ·{" "}
                     {INTERVAL_LABELS[sub.billing_interval] ?? sub.billing_interval}
+                    {sub.next_billing_date &&
+                      ` · nächste: ${new Date(sub.next_billing_date).toLocaleDateString("de-DE")}`}
                   </p>
                 </div>
                 <Badge variant={STATUS_VARIANT[sub.status] ?? "outline"}>
@@ -99,6 +114,15 @@ export default async function SubscriptionsListPage() {
           </div>
         </div>
       ))}
+
+      <div>
+        <Link
+          href={showAll ? "/abos" : "/abos?alle=1"}
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          {showAll ? "Gekündigte ausblenden" : "Gekündigte anzeigen"}
+        </Link>
+      </div>
     </div>
   );
 }

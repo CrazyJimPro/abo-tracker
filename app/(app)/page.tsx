@@ -62,7 +62,11 @@ export default async function Home() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold">
-              {monthlyTotal.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+              {monthlyTotal.toLocaleString("de-DE", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}{" "}
+              €
             </p>
           </CardContent>
         </Card>

@@ -25,7 +25,10 @@ export function CategoryPieChart({ data }: { data: Slice[] }) {
         </Pie>
         <Tooltip
           formatter={(value) =>
-            `${Number(value).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €`
+            `${Number(value).toLocaleString("de-DE", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })} €`
           }
         />
         <Legend />

@@ -82,27 +82,59 @@ create policy "profiles_update_own"
 
 
 -- ---------- categories ----------
--- Global shared lookup table, admin-managed.
+-- Global seed categories (owner_id null) are a shared, admin-managed lookup
+-- table. Any user can additionally create private categories (owner_id =
+-- their uid) that are visible only to them.
 create table public.categories (
   id uuid primary key default gen_random_uuid(),
-  name text not null unique,
+  owner_id uuid references public.profiles(id) on delete cascade,
+  name text not null,
   color text,
   sort_order int not null default 0,
   created_at timestamptz not null default now()
 );
 
+-- Names are unique among global categories, and unique per owner among
+-- private ones (a user may reuse a global name for their own category).
+create unique index categories_name_global_key
+  on public.categories (name)
+  where owner_id is null;
+
+create unique index categories_name_owner_key
+  on public.categories (owner_id, name)
+  where owner_id is not null;
+
 alter table public.categories enable row level security;
 
-create policy "categories_select_authenticated"
+-- everyone sees global categories plus their own private ones
+create policy "categories_select_visible"
   on public.categories for select
   to authenticated
-  using (true);
+  using (owner_id is null or owner_id = auth.uid());
 
-create policy "categories_all_admin"
+-- admins manage the shared global lookup table (owner_id null) only
+create policy "categories_admin_global"
   on public.categories for all
   to authenticated
-  using (public.is_admin())
-  with check (public.is_admin());
+  using (public.is_admin() and owner_id is null)
+  with check (public.is_admin() and owner_id is null);
+
+-- users have full control over their own private categories
+create policy "categories_insert_own"
+  on public.categories for insert
+  to authenticated
+  with check (owner_id = auth.uid());
+
+create policy "categories_update_own"
+  on public.categories for update
+  to authenticated
+  using (owner_id = auth.uid())
+  with check (owner_id = auth.uid());
+
+create policy "categories_delete_own"
+  on public.categories for delete
+  to authenticated
+  using (owner_id = auth.uid());
 
 insert into public.categories (name, color, sort_order) values
   ('Streaming', '#8b5cf6', 10),

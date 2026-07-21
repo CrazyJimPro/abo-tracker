@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,6 +53,8 @@ export function SubscriptionForm({
   submitLabel: string;
 }) {
   const [state, formAction, isPending] = useActionState(action, initialState);
+  const [categoryValue, setCategoryValue] = useState(defaultValues?.category_id ?? "none");
+  const isNewCategory = categoryValue === "__new__";
 
   return (
     <form action={formAction} className="space-y-4">
@@ -116,7 +118,11 @@ export function SubscriptionForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="category_id">Kategorie</Label>
-          <Select name="category_id" defaultValue={defaultValues?.category_id ?? "none"}>
+          <Select
+            name="category_id"
+            value={categoryValue}
+            onValueChange={(v) => setCategoryValue(v ?? "none")}
+          >
             <SelectTrigger id="category_id" className="w-full">
               <SelectValue placeholder="Kategorie wählen" />
             </SelectTrigger>
@@ -127,10 +133,27 @@ export function SubscriptionForm({
                   {c.name}
                 </SelectItem>
               ))}
+              <SelectItem value="__new__">+ Neue Kategorie…</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
+
+      {isNewCategory && (
+        <div className="space-y-2">
+          <Label htmlFor="new_category_name">Neue Kategorie</Label>
+          <Input
+            id="new_category_name"
+            name="new_category_name"
+            required
+            autoFocus
+            placeholder="z. B. Haushalt"
+          />
+          <p className="text-xs text-muted-foreground">
+            Wird als deine private Kategorie angelegt und nur dir angezeigt.
+          </p>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="next_billing_date">Nächste Abrechnung</Label>

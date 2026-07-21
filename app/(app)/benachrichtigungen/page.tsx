@@ -57,7 +57,8 @@ export default async function NotificationsPage() {
           {r.name}
         </Link>
         <p className="text-xs text-muted-foreground">
-          {r.amount.toLocaleString("de-DE", { minimumFractionDigits: 2 })} € ·{" "}
+          {r.amount.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
+          ·{" "}
           {new Date(r.next_billing_date!).toLocaleDateString("de-DE")} ·{" "}
           {dayLabel(diffDays(r.next_billing_date!))}
         </p>
@@ -112,8 +113,14 @@ export default async function NotificationsPage() {
                       {r.name}
                     </Link>
                     <p className="text-xs text-muted-foreground">
-                      {r.amount.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €{" → "}
-                      {r.regular_amount!.toLocaleString("de-DE", { minimumFractionDigits: 2 })} € ab{" "}
+                      {r.amount.toLocaleString("de-DE", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })} €{" → "}
+                      {r.regular_amount!.toLocaleString("de-DE", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })} € ab{" "}
                       {new Date(r.intro_until!).toLocaleDateString("de-DE")} · {when}
                     </p>
                   </div>

@@ -132,6 +132,7 @@ export default async function SubscriptionsListPage({
                   <p className="text-xs text-muted-foreground">
                     {effectiveAmount(sub, todayStr).toLocaleString("de-DE", {
                       minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
                     })}{" "}
                     € · {INTERVAL_LABELS[sub.billing_interval] ?? sub.billing_interval}
                     {promoActive(sub, todayStr) &&

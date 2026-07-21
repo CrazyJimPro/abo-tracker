@@ -16,7 +16,9 @@ export default async function SubscriptionDetailPage({
   const [{ data: subscription }, { data: categories }] = await Promise.all([
     supabase
       .from("subscriptions")
-      .select("id, name, amount, billing_interval, status, category_id, next_billing_date, notes")
+      .select(
+        "id, name, amount, billing_interval, status, category_id, next_billing_date, notes, regular_amount, intro_until"
+      )
       .eq("id", id)
       .single(),
     supabase.from("categories").select("id, name").order("sort_order"),

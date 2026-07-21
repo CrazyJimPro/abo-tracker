@@ -36,6 +36,16 @@ export default async function NotificationsPage() {
   const overdue = rows.filter((r) => r.next_billing_date! < todayStr);
   const dueSoon = rows.filter((r) => r.next_billing_date! >= todayStr);
 
+  const { data: priceData } = await supabase
+    .from("subscriptions")
+    .select("id, name, amount, regular_amount, intro_until")
+    .eq("status", "active")
+    .not("regular_amount", "is", null)
+    .gte("intro_until", todayStr)
+    .lte("intro_until", cutoffStr)
+    .order("intro_until", { ascending: true });
+  const priceChanges = priceData ?? [];
+
   const todayMs = Date.parse(`${todayStr}T00:00:00Z`);
   const diffDays = (date: string) =>
     Math.round((Date.parse(`${date}T00:00:00Z`) - todayMs) / 86400000);
@@ -64,7 +74,7 @@ export default async function NotificationsPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Benachrichtigungen</h1>
 
-      {rows.length === 0 && (
+      {rows.length === 0 && priceChanges.length === 0 && (
         <p className="text-sm text-muted-foreground">
           Alles erledigt – keine anstehenden Fälligkeiten.
         </p>
@@ -83,6 +93,34 @@ export default async function NotificationsPage() {
             Fällig in den nächsten 7 Tagen ({dueSoon.length})
           </h2>
           <div className={CONTAINER}>{dueSoon.map(renderRow)}</div>
+        </section>
+      )}
+
+      {priceChanges.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Preiswechsel in den nächsten 7 Tagen ({priceChanges.length})
+          </h2>
+          <div className={CONTAINER}>
+            {priceChanges.map((r) => {
+              const d = diffDays(r.intro_until!);
+              const when = d === 0 ? "heute" : `in ${d} Tag${d === 1 ? "" : "en"}`;
+              return (
+                <div key={r.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <Link href={`/abos/${r.id}`} className="text-sm font-medium hover:underline">
+                      {r.name}
+                    </Link>
+                    <p className="text-xs text-muted-foreground">
+                      {r.amount.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €{" → "}
+                      {r.regular_amount!.toLocaleString("de-DE", { minimumFractionDigits: 2 })} € ab{" "}
+                      {new Date(r.intro_until!).toLocaleDateString("de-DE")} · {when}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </section>
       )}
     </div>

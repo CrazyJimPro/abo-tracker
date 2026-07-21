@@ -84,6 +84,8 @@ export type Database = {
           amount: number
           billing_interval: Database["public"]["Enums"]["billing_interval"]
           category_id: string | null
+          intro_until: string | null
+          regular_amount: number | null
           created_at: string
           id: string
           name: string
@@ -97,6 +99,8 @@ export type Database = {
           amount: number
           billing_interval?: Database["public"]["Enums"]["billing_interval"]
           category_id?: string | null
+          intro_until?: string | null
+          regular_amount?: number | null
           created_at?: string
           id?: string
           name: string
@@ -110,6 +114,8 @@ export type Database = {
           amount?: number
           billing_interval?: Database["public"]["Enums"]["billing_interval"]
           category_id?: string | null
+          intro_until?: string | null
+          regular_amount?: number | null
           created_at?: string
           id?: string
           name?: string

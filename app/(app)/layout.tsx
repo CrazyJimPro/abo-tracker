@@ -15,18 +15,31 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ? await supabase.from("profiles").select("role").eq("id", user.id).single()
     : { data: null };
 
-  const cutoff = new Date();
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  const cutoff = new Date(today);
   cutoff.setUTCDate(cutoff.getUTCDate() + 7);
   const cutoffStr = cutoff.toISOString().slice(0, 10);
 
-  const { count: notifCount } = user
-    ? await supabase
+  let notifCount = 0;
+  if (user) {
+    const [{ count: dueCount }, { count: priceCount }] = await Promise.all([
+      supabase
         .from("subscriptions")
         .select("id", { count: "exact", head: true })
         .eq("status", "active")
         .not("next_billing_date", "is", null)
-        .lte("next_billing_date", cutoffStr)
-    : { count: 0 };
+        .lte("next_billing_date", cutoffStr),
+      supabase
+        .from("subscriptions")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "active")
+        .not("regular_amount", "is", null)
+        .gte("intro_until", todayStr)
+        .lte("intro_until", cutoffStr),
+    ]);
+    notifCount = (dueCount ?? 0) + (priceCount ?? 0);
+  }
 
   return (
     <div className="flex min-h-screen flex-col">

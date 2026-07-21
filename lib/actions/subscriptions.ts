@@ -36,6 +36,56 @@ function readSubscriptionFields(formData: FormData) {
   };
 }
 
+// Palette for auto-coloring newly created categories, mirroring the tones of
+// the global seed categories so a fresh private category looks at home in the
+// list and donut chart instead of falling back to grey.
+const CATEGORY_COLORS = [
+  "#8b5cf6",
+  "#ec4899",
+  "#22c55e",
+  "#3b82f6",
+  "#f97316",
+  "#eab308",
+  "#06b6d4",
+  "#ef4444",
+  "#14b8a6",
+  "#a855f7",
+];
+
+// Resolves the submitted category selection to a category id. The special
+// "__new__" value means the user typed a new category name in the form; we
+// create it as a private category (owner_id = the user) on the fly and return
+// its id. Any other value passes through unchanged.
+async function resolveCategoryId(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  categoryId: string | null,
+  formData: FormData
+): Promise<{ categoryId: string | null } | { error: string }> {
+  if (categoryId !== "__new__") return { categoryId };
+
+  const newName = (formData.get("new_category_name") as string)?.trim();
+  if (!newName) return { error: "Bitte einen Namen für die neue Kategorie angeben." };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Nicht angemeldet." };
+
+  const color = CATEGORY_COLORS[Math.floor(Math.random() * CATEGORY_COLORS.length)];
+  const { data, error } = await supabase
+    .from("categories")
+    .insert({ owner_id: user.id, name: newName, color })
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") return { error: "Du hast bereits eine Kategorie mit diesem Namen." };
+    return { error: error.message };
+  }
+
+  return { categoryId: data.id };
+}
+
 function validate(fields: ReturnType<typeof readSubscriptionFields>): string | null {
   if (!fields.name) return "Name ist erforderlich.";
   if (!Number.isFinite(fields.amount) || fields.amount < 0) {
@@ -73,13 +123,16 @@ export async function createSubscription(
   } = await supabase.auth.getUser();
   if (!user) return { error: "Nicht angemeldet." };
 
+  const resolved = await resolveCategoryId(supabase, fields.categoryId, formData);
+  if ("error" in resolved) return { error: resolved.error };
+
   const { error } = await supabase.from("subscriptions").insert({
     owner_id: user.id,
     name: fields.name,
     amount: fields.amount,
     billing_interval: fields.billingInterval as Enums<"billing_interval">,
     status: fields.status as Enums<"subscription_status">,
-    category_id: fields.categoryId,
+    category_id: resolved.categoryId,
     next_billing_date: fields.nextBillingDate,
     notes: fields.notes,
     regular_amount: fields.regularAmount,
@@ -103,6 +156,10 @@ export async function updateSubscription(
   if (validationError) return { error: validationError };
 
   const supabase = await createClient();
+
+  const resolved = await resolveCategoryId(supabase, fields.categoryId, formData);
+  if ("error" in resolved) return { error: resolved.error };
+
   const { error } = await supabase
     .from("subscriptions")
     .update({
@@ -110,7 +167,7 @@ export async function updateSubscription(
       amount: fields.amount,
       billing_interval: fields.billingInterval as Enums<"billing_interval">,
       status: fields.status as Enums<"subscription_status">,
-      category_id: fields.categoryId,
+      category_id: resolved.categoryId,
       next_billing_date: fields.nextBillingDate,
       notes: fields.notes,
       regular_amount: fields.regularAmount,

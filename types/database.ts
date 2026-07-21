@@ -20,6 +20,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          owner_id: string | null
           sort_order: number
         }
         Insert: {
@@ -27,6 +28,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          owner_id?: string | null
           sort_order?: number
         }
         Update: {
@@ -34,9 +36,18 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          owner_id?: string | null
           sort_order?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "categories_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

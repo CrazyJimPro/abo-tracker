@@ -19,6 +19,7 @@ export default async function CategoriesListPage() {
   const { data: categories } = await supabase
     .from("categories")
     .select("id, name, color, sort_order")
+    .is("owner_id", null)
     .order("sort_order");
 
   return (

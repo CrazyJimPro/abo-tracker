@@ -20,7 +20,20 @@ function readSubscriptionFields(formData: FormData) {
   const categoryId = categoryIdRaw && categoryIdRaw !== "none" ? categoryIdRaw : null;
   const nextBillingDate = (formData.get("next_billing_date") as string)?.trim() || null;
   const notes = (formData.get("notes") as string)?.trim() || null;
-  return { name, amount, billingInterval, status, categoryId, nextBillingDate, notes };
+  const regularAmountRaw = (formData.get("regular_amount") as string)?.trim();
+  const regularAmount = regularAmountRaw ? Number(regularAmountRaw) : null;
+  const introUntil = (formData.get("intro_until") as string)?.trim() || null;
+  return {
+    name,
+    amount,
+    billingInterval,
+    status,
+    categoryId,
+    nextBillingDate,
+    notes,
+    regularAmount,
+    introUntil,
+  };
 }
 
 function validate(fields: ReturnType<typeof readSubscriptionFields>): string | null {
@@ -33,6 +46,15 @@ function validate(fields: ReturnType<typeof readSubscriptionFields>): string | n
   }
   if (!STATUSES.includes(fields.status as Enums<"subscription_status">)) {
     return "Ungültiger Status.";
+  }
+  if (
+    fields.regularAmount !== null &&
+    (!Number.isFinite(fields.regularAmount) || fields.regularAmount < 0)
+  ) {
+    return "Regulärer Preis muss eine positive Zahl sein.";
+  }
+  if ((fields.regularAmount !== null) !== (fields.introUntil !== null)) {
+    return "Für einen Aktionspreis bitte regulären Preis und Enddatum angeben.";
   }
   return null;
 }
@@ -60,6 +82,8 @@ export async function createSubscription(
     category_id: fields.categoryId,
     next_billing_date: fields.nextBillingDate,
     notes: fields.notes,
+    regular_amount: fields.regularAmount,
+    intro_until: fields.introUntil,
   });
 
   if (error) return { error: error.message };
@@ -89,6 +113,8 @@ export async function updateSubscription(
       category_id: fields.categoryId,
       next_billing_date: fields.nextBillingDate,
       notes: fields.notes,
+      regular_amount: fields.regularAmount,
+      intro_until: fields.introUntil,
     })
     .eq("id", subscriptionId);
 
@@ -97,6 +123,7 @@ export async function updateSubscription(
   revalidatePath(`/abos/${subscriptionId}`);
   revalidatePath("/abos");
   revalidatePath("/");
+  revalidatePath("/benachrichtigungen");
   return { error: null };
 }
 

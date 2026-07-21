@@ -4,14 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CategoryPieChart } from "@/components/dashboard/category-pie-chart";
 import { createClient } from "@/lib/supabase/server";
 import { markBilled } from "@/lib/actions/subscriptions";
-import type { Enums } from "@/types/database";
-
-const MONTHLY_FACTOR: Record<Enums<"billing_interval">, number> = {
-  weekly: 52 / 12,
-  monthly: 1,
-  quarterly: 1 / 3,
-  yearly: 1 / 12,
-};
+import { MONTHLY_FACTOR, effectiveAmount } from "@/lib/pricing";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -27,20 +20,25 @@ export default async function Home() {
 
   const { data: subscriptions } = await supabase
     .from("subscriptions")
-    .select("id, name, amount, billing_interval, next_billing_date, categories(name, color)")
+    .select(
+      "id, name, amount, billing_interval, next_billing_date, regular_amount, intro_until, categories(name, color)"
+    )
     .eq("status", "active")
     .order("next_billing_date", { ascending: true, nullsFirst: false });
 
   const active = subscriptions ?? [];
-  const monthlyTotal = active.reduce((sum, s) => sum + s.amount * MONTHLY_FACTOR[s.billing_interval], 0);
-  const upcoming = active.filter((s) => s.next_billing_date).slice(0, 5);
   const todayStr = new Date().toISOString().slice(0, 10);
+  const monthlyTotal = active.reduce(
+    (sum, s) => sum + effectiveAmount(s, todayStr) * MONTHLY_FACTOR[s.billing_interval],
+    0
+  );
+  const upcoming = active.filter((s) => s.next_billing_date).slice(0, 5);
 
   const byCategory = new Map<string, { name: string; color: string; value: number }>();
   for (const s of active) {
     const name = s.categories?.name ?? "Ohne Kategorie";
     const color = s.categories?.color ?? "#94a3b8";
-    const monthly = s.amount * MONTHLY_FACTOR[s.billing_interval];
+    const monthly = effectiveAmount(s, todayStr) * MONTHLY_FACTOR[s.billing_interval];
     const entry = byCategory.get(name);
     if (entry) entry.value += monthly;
     else byCategory.set(name, { name, color, value: monthly });

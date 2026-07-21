@@ -47,6 +47,8 @@ export function SubscriptionForm({
     category_id: string | null;
     next_billing_date: string | null;
     notes: string | null;
+    regular_amount: number | null;
+    intro_until: string | null;
   };
   submitLabel: string;
 }) {
@@ -139,6 +141,35 @@ export function SubscriptionForm({
           defaultValue={defaultValues?.next_billing_date ?? ""}
         />
       </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="regular_amount">Regulärer Preis (€)</Label>
+          <Input
+            id="regular_amount"
+            name="regular_amount"
+            type="number"
+            step="0.01"
+            min="0"
+            defaultValue={defaultValues?.regular_amount ?? ""}
+            placeholder="optional"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="intro_until">Aktionspreis gilt bis</Label>
+          <Input
+            id="intro_until"
+            name="intro_until"
+            type="date"
+            defaultValue={defaultValues?.intro_until ?? ""}
+          />
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Optional: Zahlst du aktuell einen Aktionspreis, trage ihn oben als „Betrag“ ein und hier den
+        regulären Preis samt Enddatum der Aktion. Ab dann wird automatisch mit dem regulären Preis
+        gerechnet.
+      </p>
 
       <div className="space-y-2">
         <Label htmlFor="notes">Notizen</Label>

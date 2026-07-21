@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SubscriptionFilters } from "@/components/subscriptions/subscription-filters";
+import { effectiveAmount, promoActive } from "@/lib/pricing";
 
 const INTERVAL_LABELS: Record<string, string> = {
   weekly: "wöchentlich",
@@ -44,7 +45,7 @@ export default async function SubscriptionsListPage({
   let query = supabase
     .from("subscriptions")
     .select(
-      "id, name, amount, billing_interval, status, next_billing_date, categories(name, color, sort_order)"
+      "id, name, amount, billing_interval, status, next_billing_date, regular_amount, intro_until, categories(name, color, sort_order)"
     );
 
   if (search) query = query.ilike("name", `%${search}%`);
@@ -129,8 +130,12 @@ export default async function SubscriptionsListPage({
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{sub.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {sub.amount.toLocaleString("de-DE", { minimumFractionDigits: 2 })} € ·{" "}
-                    {INTERVAL_LABELS[sub.billing_interval] ?? sub.billing_interval}
+                    {effectiveAmount(sub, todayStr).toLocaleString("de-DE", {
+                      minimumFractionDigits: 2,
+                    })}{" "}
+                    € · {INTERVAL_LABELS[sub.billing_interval] ?? sub.billing_interval}
+                    {promoActive(sub, todayStr) &&
+                      ` · Aktion bis ${new Date(sub.intro_until!).toLocaleDateString("de-DE")}`}
                     {sub.next_billing_date && (
                       <span
                         className={

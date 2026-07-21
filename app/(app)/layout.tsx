@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BellIcon } from "lucide-react";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -13,6 +14,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { data: profile } = user
     ? await supabase.from("profiles").select("role").eq("id", user.id).single()
     : { data: null };
+
+  const cutoff = new Date();
+  cutoff.setUTCDate(cutoff.getUTCDate() + 7);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+  const { count: notifCount } = user
+    ? await supabase
+        .from("subscriptions")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "active")
+        .not("next_billing_date", "is", null)
+        .lte("next_billing_date", cutoffStr)
+    : { count: 0 };
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -38,6 +52,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             )}
           </nav>
           <div className="flex items-center gap-3">
+            <Link
+              href="/benachrichtigungen"
+              aria-label="Benachrichtigungen"
+              className="relative inline-flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:hover:bg-muted/50"
+            >
+              <BellIcon className="size-4" />
+              {notifCount ? (
+                <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] leading-4 font-medium text-white">
+                  {notifCount}
+                </span>
+              ) : null}
+            </Link>
             <ThemeToggle />
             <span className="text-sm text-muted-foreground">{user?.email}</span>
             <form action={signOut}>

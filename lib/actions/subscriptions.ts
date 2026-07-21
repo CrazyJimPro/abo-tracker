@@ -152,4 +152,5 @@ export async function markBilled(subscriptionId: string) {
   revalidatePath("/abos");
   revalidatePath(`/abos/${subscriptionId}`);
   revalidatePath("/");
+  revalidatePath("/benachrichtigungen");
 }

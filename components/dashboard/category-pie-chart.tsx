@@ -30,8 +30,16 @@ export function CategoryPieChart({ data }: { data: Slice[] }) {
               maximumFractionDigits: 2,
             })} €`
           }
+          contentStyle={{
+            background: "rgba(36, 27, 82, 0.95)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            borderRadius: 12,
+            backdropFilter: "blur(8px)",
+          }}
+          itemStyle={{ color: "#ffffff" }}
+          labelStyle={{ color: "rgba(255, 255, 255, 0.7)" }}
         />
-        <Legend />
+        <Legend wrapperStyle={{ color: "rgba(255, 255, 255, 0.8)", fontSize: 12 }} />
       </PieChart>
     </ResponsiveContainer>
   );

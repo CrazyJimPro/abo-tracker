@@ -2,7 +2,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { BellIcon } from "lucide-react";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -46,7 +45,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <header className="sticky top-0 z-40 border-b border-white/40 bg-white/40 backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
           <nav className="flex items-center gap-6">
-            <Link href="/" className="font-semibold">
+            <Link
+              href="/"
+              className="bg-gradient-to-r from-[#f472b6] to-[#60a5fa] bg-clip-text text-lg font-extrabold text-transparent"
+            >
               Abo-Tracker
             </Link>
             <Link href="/abos" className="text-sm text-muted-foreground hover:text-foreground">
@@ -77,7 +79,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 </span>
               ) : null}
             </Link>
-            <ThemeToggle />
             <span className="text-sm text-muted-foreground">{user?.email}</span>
             <form action={signOut}>
               <Button type="submit" variant="outline" size="sm">

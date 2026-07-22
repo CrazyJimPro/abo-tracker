@@ -19,6 +19,7 @@
 
 # production
 /build
+prod-server.log
 
 # misc
 .DS_Store

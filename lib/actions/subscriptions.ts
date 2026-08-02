@@ -1,14 +1,40 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import type { Enums } from "@/types/database";
+
+import { getCurrentUser } from "@/lib/auth/session";
+import {
+  createPrivateCategory,
+  deleteSubscription as deleteSubscriptionRow,
+  getSubscription,
+  insertSubscription,
+  setNextBillingDate,
+  updateSubscription as updateSubscriptionRow,
+  type SubscriptionValues,
+} from "@/lib/db/queries";
+import type { BillingInterval, SubscriptionStatus } from "@/lib/db/schema";
 
 export type ActionState = { error: string | null };
 
-const BILLING_INTERVALS: Enums<"billing_interval">[] = ["weekly", "monthly", "quarterly", "yearly"];
-const STATUSES: Enums<"subscription_status">[] = ["active", "paused", "cancelled"];
+const BILLING_INTERVALS: BillingInterval[] = ["weekly", "monthly", "quarterly", "yearly"];
+const STATUSES: SubscriptionStatus[] = ["active", "paused", "cancelled"];
+
+// Palette for auto-coloring newly created categories, mirroring the tones of
+// the global seed categories so a fresh private category looks at home in the
+// list and donut chart instead of falling back to grey.
+const CATEGORY_COLORS = [
+  "#8b5cf6",
+  "#ec4899",
+  "#22c55e",
+  "#3b82f6",
+  "#f97316",
+  "#eab308",
+  "#06b6d4",
+  "#ef4444",
+  "#14b8a6",
+  "#a855f7",
+];
 
 function readSubscriptionFields(formData: FormData) {
   const name = (formData.get("name") as string)?.trim();
@@ -36,65 +62,15 @@ function readSubscriptionFields(formData: FormData) {
   };
 }
 
-// Palette for auto-coloring newly created categories, mirroring the tones of
-// the global seed categories so a fresh private category looks at home in the
-// list and donut chart instead of falling back to grey.
-const CATEGORY_COLORS = [
-  "#8b5cf6",
-  "#ec4899",
-  "#22c55e",
-  "#3b82f6",
-  "#f97316",
-  "#eab308",
-  "#06b6d4",
-  "#ef4444",
-  "#14b8a6",
-  "#a855f7",
-];
-
-// Resolves the submitted category selection to a category id. The special
-// "__new__" value means the user typed a new category name in the form; we
-// create it as a private category (owner_id = the user) on the fly and return
-// its id. Any other value passes through unchanged.
-async function resolveCategoryId(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  categoryId: string | null,
-  formData: FormData
-): Promise<{ categoryId: string | null } | { error: string }> {
-  if (categoryId !== "__new__") return { categoryId };
-
-  const newName = (formData.get("new_category_name") as string)?.trim();
-  if (!newName) return { error: "Bitte einen Namen für die neue Kategorie angeben." };
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Nicht angemeldet." };
-
-  const color = CATEGORY_COLORS[Math.floor(Math.random() * CATEGORY_COLORS.length)];
-  const { data, error } = await supabase
-    .from("categories")
-    .insert({ owner_id: user.id, name: newName, color })
-    .select("id")
-    .single();
-
-  if (error) {
-    if (error.code === "23505") return { error: "Du hast bereits eine Kategorie mit diesem Namen." };
-    return { error: error.message };
-  }
-
-  return { categoryId: data.id };
-}
-
 function validate(fields: ReturnType<typeof readSubscriptionFields>): string | null {
   if (!fields.name) return "Name ist erforderlich.";
   if (!Number.isFinite(fields.amount) || fields.amount < 0) {
     return "Betrag muss eine positive Zahl sein.";
   }
-  if (!BILLING_INTERVALS.includes(fields.billingInterval as Enums<"billing_interval">)) {
+  if (!BILLING_INTERVALS.includes(fields.billingInterval as BillingInterval)) {
     return "Ungültiges Intervall.";
   }
-  if (!STATUSES.includes(fields.status as Enums<"subscription_status">)) {
+  if (!STATUSES.includes(fields.status as SubscriptionStatus)) {
     return "Ungültiger Status.";
   }
   if (
@@ -109,6 +85,49 @@ function validate(fields: ReturnType<typeof readSubscriptionFields>): string | n
   return null;
 }
 
+// Resolves the submitted category selection to a category id. The special
+// "__new__" value means the user typed a new category name in the form; we
+// create it as a private category (owned by the user) on the fly and return
+// its id. Any other value passes through unchanged.
+function resolveCategoryId(
+  userId: string,
+  categoryId: string | null,
+  formData: FormData
+): { categoryId: string | null } | { error: string } {
+  if (categoryId !== "__new__") return { categoryId };
+
+  const newName = (formData.get("new_category_name") as string)?.trim();
+  if (!newName) return { error: "Bitte einen Namen für die neue Kategorie angeben." };
+
+  const color = CATEGORY_COLORS[Math.floor(Math.random() * CATEGORY_COLORS.length)];
+
+  try {
+    return { categoryId: createPrivateCategory(userId, newName, color) };
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("UNIQUE")) {
+      return { error: "Du hast bereits eine Kategorie mit diesem Namen." };
+    }
+    throw e;
+  }
+}
+
+function toValues(
+  fields: ReturnType<typeof readSubscriptionFields>,
+  categoryId: string | null
+): SubscriptionValues {
+  return {
+    name: fields.name,
+    amount: fields.amount,
+    billingInterval: fields.billingInterval as BillingInterval,
+    status: fields.status as SubscriptionStatus,
+    categoryId,
+    nextBillingDate: fields.nextBillingDate,
+    notes: fields.notes,
+    regularAmount: fields.regularAmount,
+    introUntil: fields.introUntil,
+  };
+}
+
 export async function createSubscription(
   _prevState: ActionState,
   formData: FormData
@@ -117,29 +136,13 @@ export async function createSubscription(
   const validationError = validate(fields);
   if (validationError) return { error: validationError };
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: "Nicht angemeldet." };
 
-  const resolved = await resolveCategoryId(supabase, fields.categoryId, formData);
+  const resolved = resolveCategoryId(user.id, fields.categoryId, formData);
   if ("error" in resolved) return { error: resolved.error };
 
-  const { error } = await supabase.from("subscriptions").insert({
-    owner_id: user.id,
-    name: fields.name,
-    amount: fields.amount,
-    billing_interval: fields.billingInterval as Enums<"billing_interval">,
-    status: fields.status as Enums<"subscription_status">,
-    category_id: resolved.categoryId,
-    next_billing_date: fields.nextBillingDate,
-    notes: fields.notes,
-    regular_amount: fields.regularAmount,
-    intro_until: fields.introUntil,
-  });
-
-  if (error) return { error: error.message };
+  insertSubscription(user.id, toValues(fields, resolved.categoryId));
 
   revalidatePath("/abos");
   revalidatePath("/");
@@ -155,27 +158,13 @@ export async function updateSubscription(
   const validationError = validate(fields);
   if (validationError) return { error: validationError };
 
-  const supabase = await createClient();
+  const user = await getCurrentUser();
+  if (!user) return { error: "Nicht angemeldet." };
 
-  const resolved = await resolveCategoryId(supabase, fields.categoryId, formData);
+  const resolved = resolveCategoryId(user.id, fields.categoryId, formData);
   if ("error" in resolved) return { error: resolved.error };
 
-  const { error } = await supabase
-    .from("subscriptions")
-    .update({
-      name: fields.name,
-      amount: fields.amount,
-      billing_interval: fields.billingInterval as Enums<"billing_interval">,
-      status: fields.status as Enums<"subscription_status">,
-      category_id: resolved.categoryId,
-      next_billing_date: fields.nextBillingDate,
-      notes: fields.notes,
-      regular_amount: fields.regularAmount,
-      intro_until: fields.introUntil,
-    })
-    .eq("id", subscriptionId);
-
-  if (error) return { error: error.message };
+  updateSubscriptionRow(user.id, subscriptionId, toValues(fields, resolved.categoryId));
 
   revalidatePath(`/abos/${subscriptionId}`);
   revalidatePath("/abos");
@@ -185,8 +174,10 @@ export async function updateSubscription(
 }
 
 export async function deleteSubscription(subscriptionId: string) {
-  const supabase = await createClient();
-  await supabase.from("subscriptions").delete().eq("id", subscriptionId);
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  deleteSubscriptionRow(user.id, subscriptionId);
 
   revalidatePath("/abos");
   revalidatePath("/");
@@ -195,7 +186,7 @@ export async function deleteSubscription(subscriptionId: string) {
 
 // Advances an ISO date string (YYYY-MM-DD) by exactly one billing interval.
 // UTC math keeps the calendar date stable regardless of server timezone.
-function advanceBillingDate(date: string, interval: Enums<"billing_interval">): string {
+function advanceBillingDate(date: string, interval: BillingInterval): string {
   const d = new Date(`${date}T00:00:00Z`);
   switch (interval) {
     case "weekly":
@@ -218,20 +209,17 @@ function advanceBillingDate(date: string, interval: Enums<"billing_interval">): 
 // interval. One click = one cycle, so a subscription overdue by N cycles is
 // advanced N clicks (predictable rather than silently skipping missed cycles).
 export async function markBilled(subscriptionId: string) {
-  const supabase = await createClient();
-  const { data: sub } = await supabase
-    .from("subscriptions")
-    .select("next_billing_date, billing_interval")
-    .eq("id", subscriptionId)
-    .single();
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
 
-  if (!sub?.next_billing_date) return;
+  const sub = getSubscription(user.id, subscriptionId);
+  if (!sub?.nextBillingDate) return;
 
-  const next = advanceBillingDate(sub.next_billing_date, sub.billing_interval);
-  await supabase
-    .from("subscriptions")
-    .update({ next_billing_date: next })
-    .eq("id", subscriptionId);
+  setNextBillingDate(
+    user.id,
+    subscriptionId,
+    advanceBillingDate(sub.nextBillingDate, sub.billingInterval)
+  );
 
   revalidatePath("/abos");
   revalidatePath(`/abos/${subscriptionId}`);

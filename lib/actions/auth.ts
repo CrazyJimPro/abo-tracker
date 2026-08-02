@@ -1,27 +1,37 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+
+import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import {
+  createSession,
+  destroySession,
+  destroyUserSessions,
+  getCurrentUser,
+} from "@/lib/auth/session";
+import { getUserByEmail, setPassword } from "@/lib/db/queries";
 
 export type ActionState = { error: string | null };
 
 export async function signIn(_prevState: ActionState, formData: FormData): Promise<ActionState> {
-  const email = formData.get("email") as string;
+  const email = (formData.get("email") as string)?.trim().toLowerCase();
   const password = formData.get("password") as string;
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (!email || !password) return { error: "E-Mail oder Passwort ist falsch." };
 
-  if (error) {
+  const user = getUserByEmail(email);
+  // Same message whether the account is unknown or the password is wrong, so
+  // the form can't be used to probe which addresses exist.
+  if (!user || !(await verifyPassword(password, user.passwordHash))) {
     return { error: "E-Mail oder Passwort ist falsch." };
   }
 
+  await createSession(user.id);
   redirect("/");
 }
 
 export async function signOut() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+  await destroySession();
   redirect("/login");
 }
 
@@ -39,25 +49,15 @@ export async function changePassword(
     return { error: "Die Passwörter stimmen nicht überein." };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { error: authError } = await supabase.auth.updateUser({ password });
-  if (authError) {
-    return { error: authError.message };
-  }
+  setPassword(user.id, await hashPassword(password), false);
 
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update({ must_change_password: false })
-    .eq("id", user.id);
-
-  if (profileError) {
-    return { error: profileError.message };
-  }
+  // Drop every existing session (other devices, and the temp-password one) and
+  // issue a fresh cookie so the current browser stays signed in.
+  destroyUserSessions(user.id);
+  await createSession(user.id);
 
   redirect("/");
 }

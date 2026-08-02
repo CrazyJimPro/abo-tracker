@@ -1,20 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth/guards";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default async function SettingsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("display_name")
-    .eq("id", user!.id)
-    .single();
+  const user = await requireUser();
 
   return (
     <div className="space-y-6">
@@ -28,9 +19,9 @@ export default async function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">E-Mail</Label>
-            <Input id="email" defaultValue={user?.email ?? ""} disabled />
+            <Input id="email" defaultValue={user.email} disabled />
           </div>
-          <ProfileForm defaultDisplayName={profile?.display_name ?? ""} />
+          <ProfileForm defaultDisplayName={user.displayName ?? ""} />
         </CardContent>
       </Card>
     </div>

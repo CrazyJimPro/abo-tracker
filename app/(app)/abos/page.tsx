@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth/guards";
+import { listSubscriptions, listVisibleCategories } from "@/lib/db/queries";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SubscriptionFilters } from "@/components/subscriptions/subscription-filters";
@@ -35,45 +36,26 @@ export default async function SubscriptionsListPage({
   const kategorie = params.kategorie ?? "";
   const hasFilters = Boolean(search || status || kategorie);
 
-  const supabase = await createClient();
+  const user = await requireUser();
 
-  const { data: categories } = await supabase
-    .from("categories")
-    .select("id, name")
-    .order("sort_order");
-
-  let query = supabase
-    .from("subscriptions")
-    .select(
-      "id, name, amount, billing_interval, status, next_billing_date, regular_amount, intro_until, categories(name, color, sort_order)"
-    );
-
-  if (search) query = query.ilike("name", `%${search}%`);
-  if (kategorie) query = query.eq("category_id", kategorie);
-
-  if (status === "all") {
-    // no status filter — show every status
-  } else if (status === "active" || status === "paused" || status === "cancelled") {
-    query = query.eq("status", status);
-  } else {
-    query = query.neq("status", "cancelled");
-  }
-
-  const { data: subscriptions, error } = await query
-    .order("next_billing_date", { ascending: true, nullsFirst: false })
-    .order("name");
+  const categories = listVisibleCategories(user.id);
+  const subscriptions = listSubscriptions(user.id, {
+    search,
+    status,
+    categoryId: kategorie,
+  });
 
   const grouped = new Map<
     string,
-    { color: string | null; sortOrder: number; items: NonNullable<typeof subscriptions> }
+    { color: string | null; sortOrder: number; items: typeof subscriptions }
   >();
 
-  for (const sub of subscriptions ?? []) {
-    const categoryName = sub.categories?.name ?? "Ohne Kategorie";
+  for (const sub of subscriptions) {
+    const categoryName = sub.categoryName ?? "Ohne Kategorie";
     if (!grouped.has(categoryName)) {
       grouped.set(categoryName, {
-        color: sub.categories?.color ?? null,
-        sortOrder: sub.categories?.sort_order ?? 999,
+        color: sub.categoryColor ?? null,
+        sortOrder: sub.categorySortOrder ?? 999,
         items: [],
       });
     }
@@ -93,13 +75,11 @@ export default async function SubscriptionsListPage({
       </div>
 
       <SubscriptionFilters
-        categories={categories ?? []}
+        categories={categories}
         initialQ={search}
         initialStatus={status}
         initialKategorie={kategorie}
       />
-
-      {error && <p className="text-sm text-red-600">{error.message}</p>}
 
       {sortedGroups.length === 0 && (
         <p className="text-sm text-muted-foreground">
@@ -134,21 +114,21 @@ export default async function SubscriptionsListPage({
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}{" "}
-                    € · {INTERVAL_LABELS[sub.billing_interval] ?? sub.billing_interval}
+                    € · {INTERVAL_LABELS[sub.billingInterval] ?? sub.billingInterval}
                     {promoActive(sub, todayStr) &&
-                      ` · Aktion bis ${new Date(sub.intro_until!).toLocaleDateString("de-DE")}`}
-                    {sub.next_billing_date && (
+                      ` · Aktion bis ${new Date(sub.introUntil!).toLocaleDateString("de-DE")}`}
+                    {sub.nextBillingDate && (
                       <span
                         className={
-                          sub.status === "active" && sub.next_billing_date < todayStr
+                          sub.status === "active" && sub.nextBillingDate < todayStr
                             ? "font-medium text-destructive"
                             : ""
                         }
                       >
                         {" · nächste: "}
-                        {new Date(sub.next_billing_date).toLocaleDateString("de-DE")}
+                        {new Date(sub.nextBillingDate).toLocaleDateString("de-DE")}
                         {sub.status === "active" &&
-                          sub.next_billing_date < todayStr &&
+                          sub.nextBillingDate < todayStr &&
                           " (überfällig)"}
                       </span>
                     )}

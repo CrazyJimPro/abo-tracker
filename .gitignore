@@ -21,6 +21,9 @@
 /build
 prod-server.log
 
+# local database — real data and password hashes, never commit
+/data
+
 # misc
 .DS_Store
 *.pem

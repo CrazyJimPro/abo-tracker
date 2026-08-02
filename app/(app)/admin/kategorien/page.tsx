@@ -1,26 +1,12 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/guards";
+import { listGlobalCategories } from "@/lib/db/queries";
 import { Button } from "@/components/ui/button";
 
 export default async function CategoriesListPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  await requireAdmin();
 
-  const { data: currentProfile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user!.id)
-    .single();
-  if (currentProfile?.role !== "admin") redirect("/");
-
-  const { data: categories } = await supabase
-    .from("categories")
-    .select("id, name, color, sort_order")
-    .is("owner_id", null)
-    .order("sort_order");
+  const categories = listGlobalCategories();
 
   return (
     <div className="space-y-6">
@@ -41,7 +27,7 @@ export default async function CategoriesListPage() {
       )}
 
       <div className="divide-y divide-white/40 rounded-lg border border-white/40 bg-white/40 shadow-lg shadow-black/5 backdrop-blur-xl dark:divide-white/10 dark:border-white/10 dark:bg-white/5">
-        {(categories ?? []).map((c) => (
+        {categories.map((c) => (
           <Link
             key={c.id}
             href={`/admin/kategorien/${c.id}`}
@@ -54,7 +40,7 @@ export default async function CategoriesListPage() {
               />
               <p className="text-sm font-medium">{c.name}</p>
             </div>
-            <p className="text-xs text-muted-foreground">Sortierung {c.sort_order}</p>
+            <p className="text-xs text-muted-foreground">Sortierung {c.sortOrder}</p>
           </Link>
         ))}
       </div>

@@ -42,18 +42,18 @@ export function SubscriptionForm({
   defaultValues?: {
     name: string;
     amount: number;
-    billing_interval: string;
+    billingInterval: string;
     status: string;
-    category_id: string | null;
-    next_billing_date: string | null;
+    categoryId: string | null;
+    nextBillingDate: string | null;
     notes: string | null;
-    regular_amount: number | null;
-    intro_until: string | null;
+    regularAmount: number | null;
+    introUntil: string | null;
   };
   submitLabel: string;
 }) {
   const [state, formAction, isPending] = useActionState(action, initialState);
-  const [categoryValue, setCategoryValue] = useState(defaultValues?.category_id ?? "none");
+  const [categoryValue, setCategoryValue] = useState(defaultValues?.categoryId ?? "none");
   const isNewCategory = categoryValue === "__new__";
 
   return (
@@ -85,7 +85,7 @@ export function SubscriptionForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="billing_interval">Intervall</Label>
-          <Select name="billing_interval" defaultValue={defaultValues?.billing_interval ?? "monthly"}>
+          <Select name="billing_interval" defaultValue={defaultValues?.billingInterval ?? "monthly"}>
             <SelectTrigger id="billing_interval" className="w-full">
               <SelectValue placeholder="Intervall wählen" />
             </SelectTrigger>
@@ -161,7 +161,7 @@ export function SubscriptionForm({
           id="next_billing_date"
           name="next_billing_date"
           type="date"
-          defaultValue={defaultValues?.next_billing_date ?? ""}
+          defaultValue={defaultValues?.nextBillingDate ?? ""}
         />
       </div>
 
@@ -174,7 +174,7 @@ export function SubscriptionForm({
             type="number"
             step="0.01"
             min="0"
-            defaultValue={defaultValues?.regular_amount ?? ""}
+            defaultValue={defaultValues?.regularAmount ?? ""}
             placeholder="optional"
           />
         </div>
@@ -184,7 +184,7 @@ export function SubscriptionForm({
             id="intro_until"
             name="intro_until"
             type="date"
-            defaultValue={defaultValues?.intro_until ?? ""}
+            defaultValue={defaultValues?.introUntil ?? ""}
           />
         </div>
       </div>

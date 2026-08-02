@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth/guards";
+import { listDueUpTo, listPromoEnding } from "@/lib/db/queries";
 import { markBilled } from "@/lib/actions/subscriptions";
 import { Button } from "@/components/ui/button";
 
@@ -16,7 +17,7 @@ function dayLabel(diff: number) {
 }
 
 export default async function NotificationsPage() {
-  const supabase = await createClient();
+  const user = await requireUser();
 
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
@@ -24,27 +25,11 @@ export default async function NotificationsPage() {
   cutoff.setUTCDate(cutoff.getUTCDate() + 7);
   const cutoffStr = cutoff.toISOString().slice(0, 10);
 
-  const { data } = await supabase
-    .from("subscriptions")
-    .select("id, name, amount, next_billing_date")
-    .eq("status", "active")
-    .not("next_billing_date", "is", null)
-    .lte("next_billing_date", cutoffStr)
-    .order("next_billing_date", { ascending: true });
+  const rows = listDueUpTo(user.id, cutoffStr);
+  const overdue = rows.filter((r) => r.nextBillingDate! < todayStr);
+  const dueSoon = rows.filter((r) => r.nextBillingDate! >= todayStr);
 
-  const rows = data ?? [];
-  const overdue = rows.filter((r) => r.next_billing_date! < todayStr);
-  const dueSoon = rows.filter((r) => r.next_billing_date! >= todayStr);
-
-  const { data: priceData } = await supabase
-    .from("subscriptions")
-    .select("id, name, amount, regular_amount, intro_until")
-    .eq("status", "active")
-    .not("regular_amount", "is", null)
-    .gte("intro_until", todayStr)
-    .lte("intro_until", cutoffStr)
-    .order("intro_until", { ascending: true });
-  const priceChanges = priceData ?? [];
+  const priceChanges = listPromoEnding(user.id, todayStr, cutoffStr);
 
   const todayMs = Date.parse(`${todayStr}T00:00:00Z`);
   const diffDays = (date: string) =>
@@ -59,8 +44,8 @@ export default async function NotificationsPage() {
         <p className="text-xs text-muted-foreground">
           {r.amount.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
           ·{" "}
-          {new Date(r.next_billing_date!).toLocaleDateString("de-DE")} ·{" "}
-          {dayLabel(diffDays(r.next_billing_date!))}
+          {new Date(r.nextBillingDate!).toLocaleDateString("de-DE")} ·{" "}
+          {dayLabel(diffDays(r.nextBillingDate!))}
         </p>
       </div>
       <form action={markBilled.bind(null, r.id)}>
@@ -104,7 +89,7 @@ export default async function NotificationsPage() {
           </h2>
           <div className={CONTAINER}>
             {priceChanges.map((r) => {
-              const d = diffDays(r.intro_until!);
+              const d = diffDays(r.introUntil!);
               const when = d === 0 ? "heute" : `in ${d} Tag${d === 1 ? "" : "en"}`;
               return (
                 <div key={r.id} className="flex items-center justify-between gap-4 px-4 py-3">
@@ -117,11 +102,11 @@ export default async function NotificationsPage() {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })} €{" → "}
-                      {r.regular_amount!.toLocaleString("de-DE", {
+                      {r.regularAmount!.toLocaleString("de-DE", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })} € ab{" "}
-                      {new Date(r.intro_until!).toLocaleDateString("de-DE")} · {when}
+                      {new Date(r.introUntil!).toLocaleDateString("de-DE")} · {when}
                     </p>
                   </div>
                 </div>

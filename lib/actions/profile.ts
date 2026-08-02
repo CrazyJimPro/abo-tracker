@@ -1,7 +1,9 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+
+import { getCurrentUser } from "@/lib/auth/session";
+import { updateDisplayName } from "@/lib/db/queries";
 
 export type ActionState = { error: string | null; success: boolean };
 
@@ -11,20 +13,12 @@ export async function updateProfile(
 ): Promise<ActionState> {
   const displayName = (formData.get("display_name") as string)?.trim() || null;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return { error: "Nicht angemeldet.", success: false };
 
-  // RLS (profiles_update_own) allows updating your own row as long as the
-  // role stays unchanged; display_name is fine via the regular client.
-  const { error } = await supabase
-    .from("profiles")
-    .update({ display_name: displayName })
-    .eq("id", user.id);
-
-  if (error) return { error: error.message, success: false };
+  // Scoped to the acting user's own row — role and other fields are never
+  // touched here, which is what the old profiles_update_own policy enforced.
+  updateDisplayName(user.id, displayName);
 
   revalidatePath("/einstellungen");
   revalidatePath("/");

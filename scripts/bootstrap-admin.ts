@@ -8,16 +8,23 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { eq } from "drizzle-orm";
-import { resolve } from "node:path";
+import { dirname } from "node:path";
 
 import { hashPassword } from "../lib/auth/password.ts";
 import { generateTempPassword } from "../lib/passwords.ts";
+import { assertDbExists, resolveDbPath } from "../lib/db/path.ts";
 import { users } from "../lib/db/schema.ts";
+
+// Vom Speicherort dieser Datei aus, nicht von process.cwd() — sonst trifft ein
+// Aufruf aus einem anderen Verzeichnis die falsche (leere) Datenbank.
+const PROJECT_ROOT = dirname(import.meta.dirname);
 
 const ADMIN_EMAIL = process.argv[2] ?? "c.jung2811@gmx.de";
 
 async function main() {
-  const sqlite = new Database(resolve(process.env.DATABASE_PATH ?? "data/abo-tracker.db"));
+  const dbPath = resolveDbPath(PROJECT_ROOT);
+  assertDbExists(dbPath);
+  const sqlite = new Database(dbPath);
   sqlite.pragma("foreign_keys = ON");
   const db = drizzle(sqlite);
 

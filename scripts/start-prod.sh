@@ -22,9 +22,15 @@ PORT=${PORT:-3200}
 cd "$PROJECT_DIR"
 
 if ! NODE=$(find_node_bin 22.18.0); then
-  echo "Kein passendes Node (>= 22.18) gefunden. Bitte ./install.sh ausführen." >&2
+  echo "Kein passendes Node (>= 22.18) gefunden. Bitte ./installscript/install.sh ausführen." >&2
   exit 1
 fi
+
+# PID hier festhalten, nicht im Aufrufer: exec ersetzt diese Shell durch node,
+# die Nummer bleibt also dieselbe. So stimmt '.server.pid' unabhängig davon, ob
+# der Server per install.sh, von Hand oder über den Autostart gestartet wurde —
+# 'kill $(cat .server.pid)' ist der dokumentierte Weg zum Stoppen.
+echo $$ > "$PROJECT_DIR/.server.pid"
 
 exec "$NODE" node_modules/next/dist/bin/next start -p "$PORT" \
   >> "$PROJECT_DIR/prod-server.log" 2>&1

@@ -1,0 +1,184 @@
+# Installation, Backup und Restore
+
+Alles, was zum Aufsetzen und Betreiben des Abo-Trackers auf einem eigenen
+Rechner nötig ist. Die App läuft komplett lokal: ein Next.js-Server und eine
+SQLite-Datei, kein Cloud-Dienst, keine externen Accounts.
+
+## Schnellstart
+
+Diesen Befehl im Terminal einfügen und ausführen:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/CrazyJimPro/abo-tracker/main/installscript/bootstrap.sh | bash
+```
+
+Der Befehl holt das Projekt nach `~/abo-tracker` und startet dort die
+Installation. Am Ende öffnet sich der Browser und die App ist einsatzbereit.
+
+Voraussetzungen: `git` und eine Internetverbindung. Node.js braucht **nicht**
+vorher installiert zu sein — fehlt es oder ist es zu alt, bietet das Script an,
+Node 24 über nvm nachzuinstallieren.
+
+Anderes Zielverzeichnis oder ein eigener Fork:
+
+```bash
+ABO_TRACKER_DIR=~/apps/abo-tracker curl -fsSL <url> | bash
+```
+
+Wenn das Repository schon lokal liegt, geht es direkt:
+
+```bash
+cd abo-tracker
+./installscript/install.sh
+```
+
+## Was dabei passiert
+
+| Schritt | Inhalt |
+| --- | --- |
+| 1 | Node.js suchen (>= 22.18), auf Wunsch über nvm nachinstallieren |
+| 2 | Abhängigkeiten installieren (`npm ci`) |
+| 3 | `.env.local` aus `.env.example` anlegen, falls sie fehlt |
+| 4 | Datenbank anlegen und Standard-Kategorien einspielen |
+| 5 | Admin-Konto erstellen, temporäres Passwort ausgeben |
+| 6 | App bauen |
+| 7 | Server starten (Port 3200) |
+| 8 | Autostart einrichten, damit der Server einen Neustart übersteht |
+
+Das Script fragt unterwegs nach der E-Mail-Adresse für den Admin-Zugang und
+danach, ob der Autostart eingerichtet werden soll. Wer nichts gefragt werden
+will, gibt beides direkt mit:
+
+```bash
+./installscript/install.sh --email ich@example.com -y
+```
+
+| Option | Wirkung |
+| --- | --- |
+| `--email <adresse>` | E-Mail des Admin-Kontos, statt Rückfrage |
+| `--port <nummer>` | Port des Servers (Standard: 3200) |
+| `--autostart` / `--no-autostart` | Autostart erzwingen bzw. überspringen |
+| `--no-open` | Browser am Ende nicht öffnen |
+| `--no-start` | Nur installieren, Server nicht starten |
+| `-y`, `--yes` | Keine Rückfragen, überall die Vorgabe |
+
+## Direkt nach der Installation
+
+1. **Einloggen** unter <http://localhost:3200> mit der angegebenen E-Mail und
+   dem temporären Passwort aus der Ausgabe. Das Passwort wird nur dieses eine
+   Mal angezeigt — in der Datenbank liegt danach nur noch ein scrypt-Hash.
+2. **Passwort ändern.** Die App verlangt das beim ersten Login von sich aus.
+3. **Loslegen:** unter *Abos* das erste Abo anlegen. Acht Kategorien sind schon
+   da, eigene lassen sich beim Anlegen eines Abos direkt ergänzen.
+4. **Weitere Personen** bekommen unter *Admin* ein Konto mit temporärem
+   Passwort — jede Person sieht ausschließlich ihre eigenen Abos.
+
+Laufender Betrieb:
+
+```bash
+scripts/start-prod.sh          # Server von Hand starten
+kill $(cat .server.pid)        # Server stoppen
+tail -f prod-server.log        # Log mitlesen
+```
+
+Auf den neuesten Stand bringen — die Installation bleibt dabei erhalten,
+Datenbank und Konten werden nicht angefasst:
+
+```bash
+cd ~/abo-tracker
+git pull
+./installscript/install.sh
+```
+
+## Backup
+
+Zu sichern ist genau ein Verzeichnis: **`data/`**. Darin liegt
+`abo-tracker.db` mit allem, was nicht wiederherstellbar ist — Abos,
+Kategorien, Konten und Passwort-Hashes. Alles andere (Code, Abhängigkeiten,
+Build) kommt bei Bedarf aus Git zurück. Die optionale `.env.local` lohnt sich
+nur, wenn du den Datenbankpfad darin geändert hast.
+
+> Behandle die Sicherung wie ein Passwort-Archiv: sie enthält die
+> Zugangsdaten aller Nutzer in gehashter Form.
+
+Die Datenbank läuft im WAL-Modus. Deshalb reicht es **nicht**, die Datei im
+laufenden Betrieb einfach zu kopieren — ein Teil der Änderungen steht dann
+noch in `abo-tracker.db-wal` und die Kopie kann in sich widersprüchlich sein.
+Zwei Wege, die sauber sind:
+
+**Variante A — Server kurz stoppen (ohne Zusatzwerkzeug):**
+
+```bash
+cd ~/abo-tracker
+kill $(cat .server.pid)                                   # Server anhalten
+cp -a data ~/abo-tracker-backup-$(date +%Y-%m-%d)         # sichern
+scripts/start-prod.sh &                                   # wieder starten
+```
+
+Beim sauberen Beenden schreibt SQLite die WAL-Datei in die Datenbank zurück.
+`cp -a` auf den ganzen Ordner nimmt ohnehin alles mit, was da ist.
+
+**Variante B — im laufenden Betrieb, ohne den Server anzuhalten:**
+
+```bash
+cd ~/abo-tracker
+node -e 'new (require("better-sqlite3"))("data/abo-tracker.db",{readonly:true}).backup(process.argv[1])' \
+  ~/abo-tracker-backup-$(date +%Y-%m-%d).db
+```
+
+Das ist die dafür vorgesehene Backup-Funktion von SQLite: sie liefert auch bei
+gleichzeitigen Schreibzugriffen einen konsistenten Stand, als eine einzige
+Datei ohne WAL-Beiwerk. Zusätzliche Software braucht es nicht — `better-sqlite3`
+steckt schon in der Installation.
+
+Für einen täglichen Lauf um 3 Uhr per `crontab -e`:
+
+```
+0 3 * * * cd $HOME/abo-tracker && node -e 'new (require("better-sqlite3"))("data/abo-tracker.db",{readonly:true}).backup(process.argv[1])' $HOME/backups/abo-tracker-$(date +\%Y-\%m-\%d).db
+```
+
+Falls `node` im Cron nicht gefunden wird, den vollen Pfad eintragen — den zeigt
+`command -v node`. Alte Sicherungen räumt der Eintrag nicht weg, das Verzeichnis
+also gelegentlich durchsehen.
+
+## Restore
+
+```bash
+cd ~/abo-tracker
+kill $(cat .server.pid)                       # 1. Server anhalten
+rm -f data/abo-tracker.db-wal data/abo-tracker.db-shm
+cp <sicherung> data/abo-tracker.db            # 2. Sicherung einspielen
+scripts/start-prod.sh &                       # 3. Server starten
+```
+
+Für `<sicherung>` je nach Variante `…/backup-ordner/abo-tracker.db` (A) oder
+die einzelne Backup-Datei (B) einsetzen.
+
+Schritt 1 und das Löschen der `-wal`/`-shm`-Dateien sind beide wichtig: eine
+stehengebliebene WAL-Datei gehört zur *alten* Datenbank und würde nach dem
+Start über die frisch eingespielte gelegt.
+
+Danach einloggen und stichprobenartig prüfen, ob die Abos vollständig sind.
+Beachte: mit der Datenbank kommen auch die **Passwörter vom Zeitpunkt der
+Sicherung** zurück. Wurde seitdem ein Passwort geändert, gilt wieder das alte.
+
+Kein Backup mehr, aber die Datenbank ist beschädigt? Dann hilft nur der
+Neuanfang: `data/` löschen und `./installscript/install.sh` erneut ausführen —
+das legt eine leere Datenbank und ein frisches Admin-Konto an.
+
+## Umzug auf einen anderen Rechner
+
+1. Auf dem neuen Rechner ganz normal installieren (Schnellstart oben).
+2. Server stoppen, `data/abo-tracker.db` aus der Sicherung einspielen wie im
+   Abschnitt *Restore*.
+3. Server starten. Die Zugangsdaten sind dieselben wie auf dem alten Rechner.
+
+## Wenn etwas klemmt
+
+| Symptom | Ursache und Abhilfe |
+| --- | --- |
+| `Kein Node >= 22.18 gefunden` | Verneinte nvm-Installation. Node von <https://nodejs.org> installieren und erneut starten. |
+| `better-sqlite3 lässt sich nicht laden` | Es fehlen Build-Werkzeuge: `sudo apt install build-essential python3`. |
+| `Port 3200 ist von einem fremden Prozess belegt` | Anderer Dienst auf dem Port. Mit `--port 3300` ausweichen. |
+| `Datenbank nicht gefunden` | Der Server wurde aus dem falschen Verzeichnis gestartet. `scripts/start-prod.sh` benutzen. |
+| Seite lädt nicht | `tail -20 prod-server.log` zeigt den Grund. |

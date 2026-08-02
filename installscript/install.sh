@@ -2,7 +2,7 @@
 #
 # Abo-Tracker — Komplett-Installation mit einem Befehl.
 #
-#   ./install.sh
+#   ./installscript/install.sh
 #
 # Prüft Node, installiert die Abhängigkeiten, legt die lokale SQLite-Datenbank
 # an, seedet die Standard-Kategorien, erstellt den Admin-Account, baut die App,
@@ -22,9 +22,16 @@
 #
 set -euo pipefail
 
-PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+# Dieses Script liegt in installscript/, das Projekt ist eine Ebene darüber.
+INSTALL_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+PROJECT_DIR=$(dirname -- "$INSTALL_DIR")
 SCRIPT_DIR="$PROJECT_DIR/scripts"
 cd "$PROJECT_DIR"
+
+[ -f "$PROJECT_DIR/package.json" ] || {
+  echo "Kein Projekt gefunden in $PROJECT_DIR — liegt install.sh noch im Ordner installscript/?" >&2
+  exit 1
+}
 
 # shellcheck source=scripts/find-node.sh
 . "$SCRIPT_DIR/find-node.sh"
@@ -277,8 +284,9 @@ if $START_SERVER; then
   done
 
   if $READY; then
-    SERVER_PID=$(port_pid "$PORT")
-    [ -n "$SERVER_PID" ] && printf '%s\n' "$SERVER_PID" > "$PID_FILE"
+    # .server.pid schreibt start-prod.sh selbst, damit die Datei auch bei einem
+    # Start von Hand oder per Autostart stimmt.
+    SERVER_PID=$(cat "$PID_FILE" 2>/dev/null || port_pid "$PORT")
     ok "Server läuft auf $URL  (PID ${SERVER_PID:-?})"
   else
     die "Server ist nicht hochgekommen. Details stehen in prod-server.log"

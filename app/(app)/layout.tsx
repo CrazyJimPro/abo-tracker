@@ -1,18 +1,12 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth/guards";
+import { countNotifications } from "@/lib/db/queries";
 import { signOut } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { BellIcon } from "lucide-react";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = user
-    ? await supabase.from("profiles").select("role").eq("id", user.id).single()
-    : { data: null };
+  const user = await requireUser();
 
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 10);
@@ -20,25 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   cutoff.setUTCDate(cutoff.getUTCDate() + 7);
   const cutoffStr = cutoff.toISOString().slice(0, 10);
 
-  let notifCount = 0;
-  if (user) {
-    const [{ count: dueCount }, { count: priceCount }] = await Promise.all([
-      supabase
-        .from("subscriptions")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "active")
-        .not("next_billing_date", "is", null)
-        .lte("next_billing_date", cutoffStr),
-      supabase
-        .from("subscriptions")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "active")
-        .not("regular_amount", "is", null)
-        .gte("intro_until", todayStr)
-        .lte("intro_until", cutoffStr),
-    ]);
-    notifCount = (dueCount ?? 0) + (priceCount ?? 0);
-  }
+  const notifCount = countNotifications(user.id, todayStr, cutoffStr);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -60,7 +36,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             >
               Einstellungen
             </Link>
-            {profile?.role === "admin" && (
+            {user.role === "admin" && (
               <Link href="/admin" className="text-sm text-muted-foreground hover:text-foreground">
                 Admin
               </Link>
@@ -79,7 +55,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 </span>
               ) : null}
             </Link>
-            <span className="text-sm text-muted-foreground">{user?.email}</span>
+            <span className="text-sm text-muted-foreground">{user.email}</span>
             <form action={signOut}>
               <Button type="submit" variant="outline" size="sm">
                 Abmelden

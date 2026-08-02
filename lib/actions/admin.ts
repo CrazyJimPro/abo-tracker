@@ -1,24 +1,17 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { generateTempPassword } from "@/lib/passwords";
 import { revalidatePath } from "next/cache";
 
-// Both actions below use the service-role client, which bypasses RLS
-// entirely. is_admin() must therefore be re-checked here explicitly —
-// there is no RLS safety net once the service-role client is in play.
+import { hashPassword } from "@/lib/auth/password";
+import { destroyUserSessions, getCurrentUser } from "@/lib/auth/session";
+import { generateTempPassword } from "@/lib/passwords";
+import { getUserById, insertUser, setPassword } from "@/lib/db/queries";
+
+// Both actions below create or overwrite other users' credentials, so the
+// admin role is re-checked here explicitly — there is no RLS safety net.
 async function requireAdmin() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-  if (profile?.role !== "admin") return null;
-
-  return user;
+  const user = await getCurrentUser();
+  return user?.role === "admin" ? user : null;
 }
 
 export type CreateUserState = {
@@ -38,30 +31,22 @@ export async function createMemberUser(
 
   if (!email) return { error: "E-Mail ist erforderlich.", result: null };
 
-  const adminClient = createAdminClient();
   const tempPassword = generateTempPassword();
 
-  const { data, error } = await adminClient.auth.admin.createUser({
-    email,
-    password: tempPassword,
-    email_confirm: true,
-  });
-
-  if (error || !data.user) {
-    if (error?.code === "email_exists") {
+  try {
+    insertUser({
+      email,
+      passwordHash: await hashPassword(tempPassword),
+      displayName,
+      createdBy: admin.id,
+      mustChangePassword: true,
+    });
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("UNIQUE")) {
       return { error: "Es existiert bereits ein User mit dieser E-Mail.", result: null };
     }
-    return { error: error?.message ?? "Fehler beim Anlegen des Users.", result: null };
-  }
-
-  const { error: profileError } = await adminClient
-    .from("profiles")
-    .update({ display_name: displayName, created_by: admin.id })
-    .eq("id", data.user.id);
-
-  if (profileError) {
     return {
-      error: `User wurde angelegt, aber Profil-Update fehlgeschlagen: ${profileError.message}`,
+      error: e instanceof Error ? e.message : "Fehler beim Anlegen des Users.",
       result: null,
     };
   }
@@ -83,19 +68,12 @@ export async function resetMemberPassword(
   const admin = await requireAdmin();
   if (!admin) return { error: "Nicht berechtigt.", tempPassword: null };
 
-  const adminClient = createAdminClient();
+  if (!getUserById(userId)) return { error: "User nicht gefunden.", tempPassword: null };
+
   const tempPassword = generateTempPassword();
-
-  const { error: authError } = await adminClient.auth.admin.updateUserById(userId, {
-    password: tempPassword,
-  });
-  if (authError) return { error: authError.message, tempPassword: null };
-
-  const { error: profileError } = await adminClient
-    .from("profiles")
-    .update({ must_change_password: true })
-    .eq("id", userId);
-  if (profileError) return { error: profileError.message, tempPassword: null };
+  setPassword(userId, await hashPassword(tempPassword), true);
+  // Kick the user out everywhere; the old password must not stay usable.
+  destroyUserSessions(userId);
 
   revalidatePath("/admin");
   return { error: null, tempPassword };

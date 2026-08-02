@@ -1,5 +1,6 @@
-import { notFound, redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { notFound } from "next/navigation";
+import { requireAdmin } from "@/lib/auth/guards";
+import { countSubscriptionsInCategory, getGlobalCategory } from "@/lib/db/queries";
 import { updateCategory, deleteCategory } from "@/lib/actions/categories";
 import { CategoryForm } from "@/components/categories/category-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,28 +12,16 @@ export default async function CategoryDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  await requireAdmin();
 
-  const { data: currentProfile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user!.id)
-    .single();
-  if (currentProfile?.role !== "admin") redirect("/");
-
-  const [{ data: category }, { count: subscriptionCount }] = await Promise.all([
-    supabase.from("categories").select("id, name, color, sort_order").eq("id", id).single(),
-    supabase.from("subscriptions").select("id", { count: "exact", head: true }).eq("category_id", id),
-  ]);
-
+  const category = getGlobalCategory(id);
   if (!category) notFound();
+
+  const subscriptionCount = countSubscriptionsInCategory(id);
 
   const updateAction = updateCategory.bind(null, id);
   const deleteAction = deleteCategory.bind(null, id);
-  const inUse = (subscriptionCount ?? 0) > 0;
+  const inUse = subscriptionCount > 0;
 
   return (
     <div className="space-y-6">

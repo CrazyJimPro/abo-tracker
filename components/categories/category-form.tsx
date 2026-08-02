@@ -17,7 +17,7 @@ export function CategoryForm({
   defaultValues?: {
     name: string;
     color: string | null;
-    sort_order: number;
+    sortOrder: number;
   };
   submitLabel: string;
 }) {
@@ -55,7 +55,7 @@ export function CategoryForm({
             id="sort_order"
             name="sort_order"
             type="number"
-            defaultValue={defaultValues?.sort_order ?? 0}
+            defaultValue={defaultValues?.sortOrder ?? 0}
           />
         </div>
       </div>

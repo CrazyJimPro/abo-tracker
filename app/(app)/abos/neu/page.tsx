@@ -1,14 +1,12 @@
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth/guards";
+import { listVisibleCategories } from "@/lib/db/queries";
 import { createSubscription } from "@/lib/actions/subscriptions";
 import { SubscriptionForm } from "@/components/subscriptions/subscription-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function NewSubscriptionPage() {
-  const supabase = await createClient();
-  const { data: categories } = await supabase
-    .from("categories")
-    .select("id, name")
-    .order("sort_order");
+  const user = await requireUser();
+  const categories = listVisibleCategories(user.id);
 
   return (
     <Card className="max-w-lg">
@@ -16,7 +14,7 @@ export default async function NewSubscriptionPage() {
         <CardTitle>Neues Abo</CardTitle>
       </CardHeader>
       <CardContent>
-        <SubscriptionForm action={createSubscription} categories={categories ?? []} submitLabel="Anlegen" />
+        <SubscriptionForm action={createSubscription} categories={categories} submitLabel="Anlegen" />
       </CardContent>
     </Card>
   );

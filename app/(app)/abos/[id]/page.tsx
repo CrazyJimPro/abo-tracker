@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth/guards";
+import { getSubscription, listVisibleCategories } from "@/lib/db/queries";
 import { updateSubscription, deleteSubscription, markBilled } from "@/lib/actions/subscriptions";
 import { SubscriptionForm } from "@/components/subscriptions/subscription-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,20 +12,12 @@ export default async function SubscriptionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
+  const user = await requireUser();
 
-  const [{ data: subscription }, { data: categories }] = await Promise.all([
-    supabase
-      .from("subscriptions")
-      .select(
-        "id, name, amount, billing_interval, status, category_id, next_billing_date, notes, regular_amount, intro_until"
-      )
-      .eq("id", id)
-      .single(),
-    supabase.from("categories").select("id, name").order("sort_order"),
-  ]);
-
+  const subscription = getSubscription(user.id, id);
   if (!subscription) notFound();
+
+  const categories = listVisibleCategories(user.id);
 
   const updateAction = updateSubscription.bind(null, id);
   const deleteAction = deleteSubscription.bind(null, id);
@@ -39,13 +32,13 @@ export default async function SubscriptionDetailPage({
         <CardContent className="space-y-4">
           <SubscriptionForm
             action={updateAction}
-            categories={categories ?? []}
+            categories={categories}
             defaultValues={subscription}
             submitLabel="Speichern"
           />
 
           <div className="flex items-center gap-2 border-t pt-4">
-            {subscription.next_billing_date && (
+            {subscription.nextBillingDate && (
               <form action={markBilledAction}>
                 <Button type="submit" variant="secondary" size="sm">
                   Abgerechnet

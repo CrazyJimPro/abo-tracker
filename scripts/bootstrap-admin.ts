@@ -19,7 +19,11 @@ import { users } from "../lib/db/schema.ts";
 // Aufruf aus einem anderen Verzeichnis die falsche (leere) Datenbank.
 const PROJECT_ROOT = dirname(import.meta.dirname);
 
-const ADMIN_EMAIL = process.argv[2] ?? "c.jung2811@gmx.de";
+const ADMIN_EMAIL = process.argv[2];
+if (!ADMIN_EMAIL) {
+  console.error("Aufruf: node scripts/bootstrap-admin.ts <e-mail>");
+  process.exit(1);
+}
 
 async function main() {
   const dbPath = resolveDbPath(PROJECT_ROOT);

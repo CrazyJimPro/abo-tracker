@@ -2,15 +2,20 @@ import "server-only";
 
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
 
+import { assertDbExists, existingDirOrCwd, resolveDbPath } from "./path";
 import * as schema from "./schema";
 
-const DB_PATH = resolve(process.env.DATABASE_PATH ?? "data/abo-tracker.db");
+// PROJECT_ROOT wird von next.config.ts zur Build-Zeit eingesetzt, weil der
+// gebundelte Server-Code seinen eigenen Pfad nicht zuverlässig kennt. Wurde das
+// Projekt nach dem Build verschoben, zeigt der eingebackene Pfad ins Leere —
+// dann ist das Arbeitsverzeichnis die bessere Vermutung.
+const DB_PATH = resolveDbPath(existingDirOrCwd(process.env.PROJECT_ROOT));
 
 function createDb() {
-  mkdirSync(dirname(DB_PATH), { recursive: true });
+  // Die Datenbank wird von den Migrationen angelegt, nie von der App — ein
+  // fehlendes File heißt also "falscher Pfad" und nicht "erster Start".
+  assertDbExists(DB_PATH);
   const sqlite = new Database(DB_PATH);
 
   // SQLite ships with foreign keys DISABLED — without this the ON DELETE

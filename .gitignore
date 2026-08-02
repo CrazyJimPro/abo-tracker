@@ -20,6 +20,7 @@
 # production
 /build
 prod-server.log
+.server.pid
 
 # local database — real data and password hashes, never commit
 /data

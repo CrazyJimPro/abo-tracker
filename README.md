@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Abo-Tracker
 
-## Getting Started
+Abo-Verwaltung für den eigenen Rechner: Abos anlegen, Kategorien vergeben und
+sehen, was das alles pro Monat kostet. Next.js mit lokaler SQLite-Datenbank —
+kein Cloud-Dienst, keine Accounts irgendwo draußen, alle Daten bleiben in
+`data/abo-tracker.db`.
 
-First, run the development server:
+## Installation
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+./install.sh
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Das Script erledigt alles: Node prüfen, Pakete installieren, Datenbank anlegen,
+Standard-Kategorien anlegen, Admin-Konto erstellen, App bauen, Server starten
+und den Browser öffnen. Das temporäre Admin-Passwort steht am Ende der Ausgabe
+und wird beim ersten Login geändert.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Ein zweiter Lauf aktualisiert die Installation, ohne vorhandene Abos, Konten
+oder Passwörter anzufassen — also auch nach einem `git pull` das Richtige.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Nützliche Optionen (`./install.sh --help` zeigt alle):
 
-## Learn More
+| Option | Wirkung |
+| --- | --- |
+| `--email <adresse>` | E-Mail des Admin-Kontos, statt Rückfrage |
+| `--port <nummer>` | Server-Port (Standard: 3200) |
+| `--autostart` | Server nach jedem Reboot automatisch starten |
+| `-y` | Keine Rückfragen, überall die Vorgabe |
 
-To learn more about Next.js, take a look at the following resources:
+Voraussetzung ist Node.js 22.18 oder neuer; fehlt es, bietet das Script an, es
+über nvm zu installieren.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Betrieb
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+scripts/start-prod.sh          # Server starten (Port 3200, Log in prod-server.log)
+kill $(cat .server.pid)        # Server stoppen
+```
 
-## Deploy on Vercel
+## Entwicklung
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run dev                    # Dev-Server mit Hot Reload
+npm run build                  # Produktions-Build
+npm run lint                   # ESLint
+npm run db:migrate             # Migrationen aus drizzle/ anwenden
+npm run db:seed                # Globale Standard-Kategorien nachziehen
+npm run bootstrap-admin <mail> # Weiteres Admin-Konto anlegen
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Schema-Änderungen gehen über `lib/db/schema.ts`; die Migration dazu erzeugt
+`npx drizzle-kit generate`.
+
+Die Datenbank liegt standardmäßig unter `data/abo-tracker.db` und lässt sich
+über `DATABASE_PATH` in `.env.local` verschieben — relative Angaben zählen ab
+dem Projektverzeichnis, nicht ab dem Arbeitsverzeichnis des Aufrufers. Ein Backup ist ein simples
+Kopieren dieser Datei — versioniert wird sie bewusst nicht (`/data` steht in
+`.gitignore`), weil dort echte Daten und Passwort-Hashes liegen.

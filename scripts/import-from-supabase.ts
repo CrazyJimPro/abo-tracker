@@ -12,11 +12,16 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 
 import { hashPassword } from "../lib/auth/password.ts";
 import { generateTempPassword } from "../lib/passwords.ts";
+import { assertDbExists, resolveDbPath } from "../lib/db/path.ts";
 import { categories, subscriptions, users } from "../lib/db/schema.ts";
+
+// Vom Speicherort dieser Datei aus, nicht von process.cwd() — sonst trifft ein
+// Aufruf aus einem anderen Verzeichnis die falsche (leere) Datenbank.
+const PROJECT_ROOT = dirname(import.meta.dirname);
 
 type ExportedProfile = {
   id: string;
@@ -55,14 +60,16 @@ type ExportedSubscription = {
 const num = (v: string | number | null) => (v === null ? null : Number(v));
 
 async function main() {
-  const dumpPath = resolve("data/supabase-export.json");
+  const dumpPath = resolve(PROJECT_ROOT, "data/supabase-export.json");
   const dump = JSON.parse(readFileSync(dumpPath, "utf8")) as {
     profiles: ExportedProfile[];
     categories: ExportedCategory[];
     subscriptions: ExportedSubscription[];
   };
 
-  const sqlite = new Database(resolve(process.env.DATABASE_PATH ?? "data/abo-tracker.db"));
+  const dbPath = resolveDbPath(PROJECT_ROOT);
+  assertDbExists(dbPath);
+  const sqlite = new Database(dbPath);
   sqlite.pragma("foreign_keys = ON");
   const db = drizzle(sqlite);
 

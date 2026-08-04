@@ -28,14 +28,14 @@ geändert.
 Ein zweiter Lauf aktualisiert die Installation, ohne vorhandene Abos, Konten
 oder Passwörter anzufassen — also auch nach einem `git pull` das Richtige.
 
-**Ausführliche Anleitung samt Backup und Restore:
+**Ausführliche Anleitung samt Backup, Restore und Deinstallation:
 [installscript/README.md](installscript/README.md)**
 
 ## Betrieb
 
 ```bash
 scripts/start-prod.sh          # Server starten (Port 3200, Log in prod-server.log)
-kill $(cat .server.pid)        # Server stoppen
+scripts/stop-prod.sh           # Server stoppen
 ```
 
 ## Entwicklung

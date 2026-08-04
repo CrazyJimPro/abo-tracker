@@ -1,4 +1,4 @@
-# Installation, Backup und Restore
+# Installation, Backup, Restore und Deinstallation
 
 Alles, was zum Aufsetzen und Betreiben des Abo-Trackers auf einem eigenen
 Rechner nötig ist. Die App läuft komplett lokal: ein Next.js-Server und eine
@@ -77,7 +77,7 @@ Laufender Betrieb:
 
 ```bash
 scripts/start-prod.sh          # Server von Hand starten
-kill $(cat .server.pid)        # Server stoppen
+scripts/stop-prod.sh           # Server stoppen
 tail -f prod-server.log        # Log mitlesen
 ```
 
@@ -110,7 +110,7 @@ Zwei Wege, die sauber sind:
 
 ```bash
 cd ~/abo-tracker
-kill $(cat .server.pid)                                   # Server anhalten
+scripts/stop-prod.sh                                      # Server anhalten
 cp -a data ~/abo-tracker-backup-$(date +%Y-%m-%d)         # sichern
 scripts/start-prod.sh &                                   # wieder starten
 ```
@@ -145,7 +145,7 @@ also gelegentlich durchsehen.
 
 ```bash
 cd ~/abo-tracker
-kill $(cat .server.pid)                       # 1. Server anhalten
+scripts/stop-prod.sh                          # 1. Server anhalten
 rm -f data/abo-tracker.db-wal data/abo-tracker.db-shm
 cp <sicherung> data/abo-tracker.db            # 2. Sicherung einspielen
 scripts/start-prod.sh &                       # 3. Server starten
@@ -166,6 +166,34 @@ Kein Backup mehr, aber die Datenbank ist beschädigt? Dann hilft nur der
 Neuanfang: `data/` löschen und `./installscript/install.sh` erneut ausführen —
 das legt eine leere Datenbank und ein frisches Admin-Konto an.
 
+## Deinstallation
+
+```bash
+cd ~/abo-tracker
+./installscript/uninstall.sh
+```
+
+Stoppt den Server, entfernt den Autostart-Eintrag und löscht danach den
+kompletten Projektordner samt Datenbank — Abos, Konten und Passwort-Hashes
+eingeschlossen. Fragt vor dem endgültigen Löschen einmal nach. Wer nicht
+gefragt werden will:
+
+```bash
+./installscript/uninstall.sh -y
+```
+
+Um die Datenbank zu behalten statt sie mit zu löschen, z.B. für eine
+spätere Neuinstallation:
+
+```bash
+./installscript/uninstall.sh --keep-data
+```
+
+Das kopiert `data/` vorher nach `<Projektordner>-data-backup-<Datum>` —
+neben den (dann gelöschten) Projektordner, am Standardort also z.B.
+`~/abo-tracker-data-backup-2026-08-04`. Für ein reguläres Backup unabhängig
+von einer Deinstallation siehe [Backup](#backup) oben.
+
 ## Umzug auf einen anderen Rechner
 
 1. Auf dem neuen Rechner ganz normal installieren (Schnellstart oben).
@@ -181,4 +209,5 @@ das legt eine leere Datenbank und ein frisches Admin-Konto an.
 | `better-sqlite3 lässt sich nicht laden` | Es fehlen Build-Werkzeuge: `sudo apt install build-essential python3`. |
 | `Port 3200 ist von einem fremden Prozess belegt` | Anderer Dienst auf dem Port. Mit `--port 3300` ausweichen. |
 | `Datenbank nicht gefunden` | Der Server wurde aus dem falschen Verzeichnis gestartet. `scripts/start-prod.sh` benutzen. |
+| `kill $(cat .server.pid)` sagt `No such process` | Der Server läuft schon nicht mehr, `.server.pid` war nur veraltet — kein Fehler. `scripts/stop-prod.sh` benutzen, das prüft den tatsächlichen Zustand statt der Datei blind zu vertrauen. |
 | Seite lädt nicht | `tail -20 prod-server.log` zeigt den Grund. |

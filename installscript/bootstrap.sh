@@ -42,8 +42,18 @@ fi
 # Erst im Subshell öffnen: gibt es gar kein Terminal (Cron, CI), schlägt das
 # hier folgenlos fehl, statt das Script unter 'set -e' zu beenden. install.sh
 # kommt ohne Terminal zurecht, verlangt dann aber --email.
+#
+# Die Umleitung muss Teil desselben exec sein wie der Aufruf von install.sh,
+# nicht ein vorangehendes eigenes 'exec < /dev/tty': dieses Script wird selbst
+# per Pipe an bash gestreamt, und bash liest seine eigenen restlichen Zeilen
+# ebenfalls aus stdin nach. Ein separates 'exec < /dev/tty' zieht stdin schon
+# um, bevor die letzte Zeile (der Aufruf von install.sh) gelesen ist — bash
+# sucht sie danach auf dem jetzt leeren Terminal-fd, findet dort sofort EOF
+# und beendet sich kommentarlos mit Exit-Code 0, ohne install.sh je zu
+# starten. Mit echtem Terminal reproduzierbar, ohne (z.B. in dieser Sandbox)
+# nicht, weil die Umleitung dann komplett übersprungen wird.
 if [ ! -t 0 ] && (exec 3< /dev/tty) 2>/dev/null; then
-  exec < /dev/tty
+  exec "$TARGET/installscript/install.sh" "$@" < /dev/tty
+else
+  exec "$TARGET/installscript/install.sh" "$@"
 fi
-
-exec "$TARGET/installscript/install.sh" "$@"

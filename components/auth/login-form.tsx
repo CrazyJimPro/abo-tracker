@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { signIn, type ActionState } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ const initialState: ActionState = { error: null };
 
 export function LoginForm() {
   const [state, formAction, isPending] = useActionState(signIn, initialState);
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <form action={formAction} className="space-y-4">
@@ -19,13 +21,26 @@ export function LoginForm() {
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Passwort</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          required
-          autoComplete="current-password"
-        />
+        <div className="relative">
+          <Input
+            id="password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            required
+            autoComplete="current-password"
+            className="pr-10"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="absolute right-1 top-1/2 -translate-y-1/2"
+            onClick={() => setShowPassword((prev) => !prev)}
+            aria-label={showPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+          >
+            {showPassword ? <EyeOff /> : <Eye />}
+          </Button>
+        </div>
       </div>
       {state.error && <p className="text-sm text-red-600">{state.error}</p>}
       <Button type="submit" className="w-full" disabled={isPending}>

@@ -148,9 +148,11 @@ unter **`abo-backup`** auf dem Schreibtisch — das Script fragt dafür
 `xdg-user-dir DESKTOP` ab, trifft also auch bei deutscher Locale
 („Schreibtisch" statt „Desktop") den richtigen, tatsächlich sichtbaren Ordner.
 Eine Datei pro Kalendertag (`abo-tracker-JJJJ-MM-TT.db`), mehrere Starts am
-selben Tag überschreiben dieselbe Datei. Alte Sicherungen räumt der Eintrag
-nicht weg, den Ordner also gelegentlich durchsehen. Node muss dafür nicht von
-Hand gesucht werden — `backup-to-desktop.sh` löst das wie `install.sh` selbst.
+selben Tag überschreiben dieselbe Datei. Das Script behält automatisch nur
+die **letzten 10** Sicherungen und löscht ältere selbst — nichts, worum man
+sich manuell kümmern muss. Anzahl in `scripts/backup-to-desktop.sh` über die
+Variable `KEEP` einstellbar. Node muss dafür nicht von Hand gesucht werden —
+`backup-to-desktop.sh` löst das wie `install.sh` selbst.
 
 ## Restore
 

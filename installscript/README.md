@@ -131,15 +131,26 @@ gleichzeitigen Schreibzugriffen einen konsistenten Stand, als eine einzige
 Datei ohne WAL-Beiwerk. Zusätzliche Software braucht es nicht — `better-sqlite3`
 steckt schon in der Installation.
 
-Für einen täglichen Lauf um 3 Uhr per `crontab -e`:
+**Automatisch bei jedem Start** — praktisch gerade auf einer VM, die nicht
+durchgehend läuft und deshalb selten oder nie um eine feste Uhrzeit an ist:
+`scripts/backup-to-desktop.sh` bündelt Variante B (WAL-sicheres Online-Backup,
+kein Server-Stopp nötig) in einem Script, das auch die richtige Node-Version
+selbst findet (wie `install.sh`). Per `crontab -e` einmalig eintragen:
 
 ```
-0 3 * * * cd $HOME/abo-tracker && node -e 'new (require("better-sqlite3"))("data/abo-tracker.db",{readonly:true}).backup(process.argv[1])' $HOME/backups/abo-tracker-$(date +\%Y-\%m-\%d).db
+@reboot sleep 60 && $HOME/abo-tracker/scripts/backup-to-desktop.sh >> $HOME/abo-tracker/backup.log 2>&1
 ```
 
-Falls `node` im Cron nicht gefunden wird, den vollen Pfad eintragen — den zeigt
-`command -v node`. Alte Sicherungen räumt der Eintrag nicht weg, das Verzeichnis
-also gelegentlich durchsehen.
+`@reboot` löst beim Start von Cron aus (also faktisch beim Hochfahren),
+`sleep 60` verzögert um eine Minute, damit die Datenbank sicher da ist, bevor
+gesichert wird. Pfad ggf. anpassen, falls das Projekt woanders liegt. Landet
+unter **`abo-backup`** auf dem Schreibtisch — das Script fragt dafür
+`xdg-user-dir DESKTOP` ab, trifft also auch bei deutscher Locale
+(„Schreibtisch" statt „Desktop") den richtigen, tatsächlich sichtbaren Ordner.
+Eine Datei pro Kalendertag (`abo-tracker-JJJJ-MM-TT.db`), mehrere Starts am
+selben Tag überschreiben dieselbe Datei. Alte Sicherungen räumt der Eintrag
+nicht weg, den Ordner also gelegentlich durchsehen. Node muss dafür nicht von
+Hand gesucht werden — `backup-to-desktop.sh` löst das wie `install.sh` selbst.
 
 ## Restore
 

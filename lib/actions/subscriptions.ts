@@ -14,27 +14,9 @@ import {
   type SubscriptionValues,
 } from "@/lib/db/queries";
 import type { BillingInterval, SubscriptionStatus } from "@/lib/db/schema";
+import { CATEGORY_COLORS, validate } from "@/lib/subscription-validation";
 
 export type ActionState = { error: string | null };
-
-const BILLING_INTERVALS: BillingInterval[] = ["weekly", "monthly", "quarterly", "yearly"];
-const STATUSES: SubscriptionStatus[] = ["active", "paused", "cancelled"];
-
-// Palette for auto-coloring newly created categories, mirroring the tones of
-// the global seed categories so a fresh private category looks at home in the
-// list and donut chart instead of falling back to grey.
-const CATEGORY_COLORS = [
-  "#8b5cf6",
-  "#ec4899",
-  "#22c55e",
-  "#3b82f6",
-  "#f97316",
-  "#eab308",
-  "#06b6d4",
-  "#ef4444",
-  "#14b8a6",
-  "#a855f7",
-];
 
 function readSubscriptionFields(formData: FormData) {
   const name = (formData.get("name") as string)?.trim();
@@ -60,29 +42,6 @@ function readSubscriptionFields(formData: FormData) {
     regularAmount,
     introUntil,
   };
-}
-
-function validate(fields: ReturnType<typeof readSubscriptionFields>): string | null {
-  if (!fields.name) return "Name ist erforderlich.";
-  if (!Number.isFinite(fields.amount) || fields.amount < 0) {
-    return "Betrag muss eine positive Zahl sein.";
-  }
-  if (!BILLING_INTERVALS.includes(fields.billingInterval as BillingInterval)) {
-    return "Ungültiges Intervall.";
-  }
-  if (!STATUSES.includes(fields.status as SubscriptionStatus)) {
-    return "Ungültiger Status.";
-  }
-  if (
-    fields.regularAmount !== null &&
-    (!Number.isFinite(fields.regularAmount) || fields.regularAmount < 0)
-  ) {
-    return "Regulärer Preis muss eine positive Zahl sein.";
-  }
-  if ((fields.regularAmount !== null) !== (fields.introUntil !== null)) {
-    return "Für einen Aktionspreis bitte regulären Preis und Enddatum angeben.";
-  }
-  return null;
 }
 
 // Resolves the submitted category selection to a category id. The special

@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/guards";
 import { countNotifications } from "@/lib/db/queries";
 import { signOut } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
+import { UpdateBadge } from "@/components/layout/update-badge";
 import { BellIcon } from "lucide-react";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -27,6 +29,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             >
               Abo-Tracker
             </Link>
+            <Suspense fallback={null}>
+              <UpdateBadge />
+            </Suspense>
             <Link href="/abos" className="text-sm text-muted-foreground hover:text-foreground">
               Abos
             </Link>

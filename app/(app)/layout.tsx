@@ -5,6 +5,7 @@ import { countNotifications } from "@/lib/db/queries";
 import { signOut } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { UpdateBadge } from "@/components/layout/update-badge";
+import { CURRENT_VERSION } from "@/lib/version";
 import { BellIcon } from "lucide-react";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -29,6 +30,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             >
               Abo-Tracker
             </Link>
+            <a
+              href="https://github.com/CrazyJimPro/abo-tracker/releases"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              v{CURRENT_VERSION}
+            </a>
             <Suspense fallback={null}>
               <UpdateBadge />
             </Suspense>

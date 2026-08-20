@@ -171,10 +171,48 @@ export function getSubscription(userId: string, id: string) {
     .get();
 }
 
-export function insertSubscription(userId: string, values: SubscriptionValues) {
+// Exact-match lookup used by CSV import to catch duplicates that an id-based
+// check can miss (id column absent, or from a different database entirely —
+// see insertSubscription). Nullable columns need `is null` rather than
+// `= null`, hence the ternaries instead of a plain eq() for each.
+export function findMatchingSubscription(userId: string, values: SubscriptionValues) {
+  return db
+    .select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.ownerId, userId),
+        eq(subscriptions.name, values.name),
+        eq(subscriptions.amount, values.amount),
+        eq(subscriptions.billingInterval, values.billingInterval),
+        eq(subscriptions.status, values.status),
+        values.categoryId === null
+          ? isNull(subscriptions.categoryId)
+          : eq(subscriptions.categoryId, values.categoryId),
+        values.nextBillingDate === null
+          ? isNull(subscriptions.nextBillingDate)
+          : eq(subscriptions.nextBillingDate, values.nextBillingDate),
+        values.notes === null ? isNull(subscriptions.notes) : eq(subscriptions.notes, values.notes),
+        values.regularAmount === null
+          ? isNull(subscriptions.regularAmount)
+          : eq(subscriptions.regularAmount, values.regularAmount),
+        values.introUntil === null
+          ? isNull(subscriptions.introUntil)
+          : eq(subscriptions.introUntil, values.introUntil)
+      )
+    )
+    .get();
+}
+
+// Reuses the given id when the caller has one (CSV import, so re-importing
+// the same file — even into a different database — recognizes its own rows
+// by id next time instead of relying on findMatchingSubscription above).
+// Generates a fresh one otherwise, same as before.
+export function insertSubscription(userId: string, values: SubscriptionValues, id: string = newId()) {
   db.insert(subscriptions)
-    .values({ id: newId(), ownerId: userId, ...values })
+    .values({ id, ownerId: userId, ...values })
     .run();
+  return id;
 }
 
 export function updateSubscription(userId: string, id: string, values: SubscriptionValues) {

@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import {
   createPrivateCategory,
+  findMatchingSubscription,
   getSubscription,
   insertSubscription,
   listVisibleCategories,
@@ -19,6 +20,7 @@ import { billingIntervalFromLabel, parseGermanDecimal, parseSubscriptionsCsv, st
 export type ImportResult = {
   inserted: number;
   updated: number;
+  skipped: number;
   errors: { row: number; message: string }[];
   categoriesCreated: string[];
 };
@@ -47,6 +49,7 @@ export async function importSubscriptionsCsv(
   const categoriesCreated: string[] = [];
   let inserted = 0;
   let updated = 0;
+  let skipped = 0;
 
   db.transaction(() => {
     for (const { raw, rowNumber } of rows) {
@@ -122,8 +125,23 @@ export async function importSubscriptionsCsv(
       if (existing) {
         updateSubscription(user.id, rowId, values);
         updated++;
+      } else if (findMatchingSubscription(user.id, values)) {
+        // No id match, but every field is identical to a subscription this
+        // user already has — re-importing a file whose rows never got
+        // matched by id (e.g. the first import into a different database,
+        // like a test VM) would otherwise duplicate each row exactly.
+        skipped++;
       } else {
-        insertSubscription(user.id, values);
+        // Reuse the CSV's own id when there is one, so re-importing this
+        // file later — even into a different database — recognizes these
+        // rows by id next time instead of relying on the content check
+        // above. Falls back to a fresh id on the rare chance it's taken.
+        try {
+          insertSubscription(user.id, values, rowId || undefined);
+        } catch (e) {
+          if (!(e instanceof Error && e.message.includes("UNIQUE"))) throw e;
+          insertSubscription(user.id, values);
+        }
         inserted++;
       }
     }
@@ -135,7 +153,7 @@ export async function importSubscriptionsCsv(
   revalidatePath("/einstellungen");
 
   return {
-    result: { inserted, updated, errors, categoriesCreated },
+    result: { inserted, updated, skipped, errors, categoriesCreated },
     fatalError: null,
   };
 }

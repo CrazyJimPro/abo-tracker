@@ -26,8 +26,12 @@ export function ImportForm() {
         <div className="space-y-1 text-sm">
           <p className="text-primary">
             {state.result.inserted + state.result.updated} von{" "}
-            {state.result.inserted + state.result.updated + state.result.errors.length} Zeilen importiert
-            ({state.result.inserted} neu, {state.result.updated} aktualisiert).
+            {state.result.inserted +
+              state.result.updated +
+              state.result.skipped +
+              state.result.errors.length}{" "}
+            Zeilen importiert ({state.result.inserted} neu, {state.result.updated} aktualisiert
+            {state.result.skipped > 0 && `, ${state.result.skipped} bereits vorhanden übersprungen`}).
           </p>
           {state.result.categoriesCreated.length > 0 && (
             <p className="text-muted-foreground">

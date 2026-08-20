@@ -137,8 +137,10 @@ export function listSubscriptions(
   const { status } = filters;
   if (status === "active" || status === "paused" || status === "cancelled") {
     conditions.push(eq(subscriptions.status, status));
-  } else if (status !== "all") {
-    // Default view hides cancelled subscriptions.
+  } else if (status === "") {
+    // "Aktiv & pausiert" — the one explicit filter option that still hides
+    // cancelled subscriptions. Anything else (in particular "all", or no
+    // filter set at all) shows every status.
     conditions.push(ne(subscriptions.status, "cancelled"));
   }
 
@@ -284,6 +286,20 @@ export function insertUser(values: {
 
 export function updateDisplayName(userId: string, displayName: string | null) {
   db.update(users).set({ displayName, updatedAt: nowIso() }).where(eq(users.id, userId)).run();
+}
+
+export function setAboStatusFilter(userId: string, status: string) {
+  db.update(users)
+    .set({ aboStatusFilter: status, updatedAt: nowIso() })
+    .where(eq(users.id, userId))
+    .run();
+}
+
+export function setAboCategoryFilter(userId: string, categoryId: string) {
+  db.update(users)
+    .set({ aboCategoryFilter: categoryId, updatedAt: nowIso() })
+    .where(eq(users.id, userId))
+    .run();
 }
 
 export function setPassword(userId: string, passwordHash: string, mustChangePassword: boolean) {

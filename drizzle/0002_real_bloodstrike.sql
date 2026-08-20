@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `abo_category_filter` text DEFAULT '' NOT NULL;

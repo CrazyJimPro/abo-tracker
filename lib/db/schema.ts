@@ -40,6 +40,18 @@ export const users = sqliteTable(
       .notNull()
       .default(true),
     createdBy: text("created_by"),
+    // Last status filter chosen on the Abos list ("" = active+paused, the
+    // select's first option). Persisted per user so it survives logins and
+    // fresh tab visits, not just the current URL. No CHECK constraint here on
+    // purpose: adding one forces SQLite into a rebuild-the-table migration,
+    // and that path cascade-deleted every owned row in testing (the
+    // PRAGMA foreign_keys=OFF meant to guard it is a silent no-op inside a
+    // transaction). Valid values are enforced in the server action instead.
+    aboStatusFilter: text("abo_status_filter").notNull().default("all"),
+    // Last category filter chosen on the Abos list ("" = "Alle Kategorien").
+    // Same reasoning as aboStatusFilter above re: no CHECK constraint — and
+    // category ids are dynamic per-user anyway, so a fixed enum wouldn't fit.
+    aboCategoryFilter: text("abo_category_filter").notNull().default(""),
     ...timestamps,
   },
   (t) => [

@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `abo_status_filter` text DEFAULT 'all' NOT NULL;

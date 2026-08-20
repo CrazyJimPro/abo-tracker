@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
+import { updateAboCategoryFilter, updateAboStatusFilter } from "@/lib/actions/profile";
 
 type CategoryOption = { id: string; name: string };
 
@@ -52,7 +53,14 @@ export function SubscriptionFilters({
         placeholder="Suche nach Name…"
         className="max-w-56"
       />
-      <select value={status} onChange={(e) => setStatus(e.target.value)} className={SELECT_CLASS}>
+      <select
+        value={status}
+        onChange={(e) => {
+          setStatus(e.target.value);
+          void updateAboStatusFilter(e.target.value);
+        }}
+        className={SELECT_CLASS}
+      >
         <option value="">Aktiv &amp; pausiert</option>
         <option value="active">Aktiv</option>
         <option value="paused">Pausiert</option>
@@ -61,7 +69,10 @@ export function SubscriptionFilters({
       </select>
       <select
         value={kategorie}
-        onChange={(e) => setKategorie(e.target.value)}
+        onChange={(e) => {
+          setKategorie(e.target.value);
+          void updateAboCategoryFilter(e.target.value);
+        }}
         className={SELECT_CLASS}
       >
         <option value="">Alle Kategorien</option>

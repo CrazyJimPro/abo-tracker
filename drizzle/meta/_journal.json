@@ -8,6 +8,20 @@
       "when": 1785674831389,
       "tag": "0000_colorful_ogun",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1787221163372,
+      "tag": "0001_clumsy_otto_octavius",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787222043989,
+      "tag": "0002_real_bloodstrike",
+      "breakpoints": true
     }
   ]
 }

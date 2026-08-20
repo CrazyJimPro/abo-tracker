@@ -30,13 +30,16 @@ export default async function SubscriptionsListPage({
 }: {
   searchParams: Promise<{ q?: string; status?: string; kategorie?: string }>;
 }) {
+  const user = await requireUser();
+
   const params = await searchParams;
   const search = params.q?.trim() ?? "";
-  const status = params.status ?? "";
-  const kategorie = params.kategorie ?? "";
-  const hasFilters = Boolean(search || status || kategorie);
-
-  const user = await requireUser();
+  // Falls back to the user's last-saved choice when the URL doesn't pin one
+  // down (fresh login, clicking into the tab) — "all" for anyone who's never
+  // touched the filter, since that's the default now.
+  const status = params.status ?? user.aboStatusFilter;
+  const kategorie = params.kategorie ?? user.aboCategoryFilter;
+  const hasFilters = Boolean(search || kategorie) || status !== "all";
 
   const categories = listVisibleCategories(user.id);
   const subscriptions = listSubscriptions(user.id, {

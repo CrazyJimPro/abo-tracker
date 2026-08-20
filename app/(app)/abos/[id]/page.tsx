@@ -1,7 +1,12 @@
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth/guards";
 import { getSubscription, listVisibleCategories } from "@/lib/db/queries";
-import { updateSubscription, deleteSubscription, markBilled } from "@/lib/actions/subscriptions";
+import {
+  createSubscription,
+  updateSubscription,
+  deleteSubscription,
+  markBilled,
+} from "@/lib/actions/subscriptions";
 import { SubscriptionForm } from "@/components/subscriptions/subscription-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,7 +36,9 @@ export default async function SubscriptionDetailPage({
         </CardHeader>
         <CardContent className="space-y-4">
           <SubscriptionForm
+            key={subscription.updatedAt}
             action={updateAction}
+            duplicateAction={createSubscription}
             categories={categories}
             defaultValues={subscription}
             submitLabel="Speichern"

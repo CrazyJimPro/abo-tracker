@@ -33,11 +33,13 @@ type CategoryOption = { id: string; name: string };
 
 export function SubscriptionForm({
   action,
+  duplicateAction,
   categories,
   defaultValues,
   submitLabel,
 }: {
   action: (prevState: ActionState, formData: FormData) => Promise<ActionState>;
+  duplicateAction?: (prevState: ActionState, formData: FormData) => Promise<ActionState>;
   categories: CategoryOption[];
   defaultValues?: {
     name: string;
@@ -53,6 +55,10 @@ export function SubscriptionForm({
   submitLabel: string;
 }) {
   const [state, formAction, isPending] = useActionState(action, initialState);
+  const [duplicateState, duplicateFormAction, isDuplicatePending] = useActionState(
+    duplicateAction ?? action,
+    initialState
+  );
   const [categoryValue, setCategoryValue] = useState(defaultValues?.categoryId ?? "none");
   const isNewCategory = categoryValue === "__new__";
 
@@ -199,10 +205,30 @@ export function SubscriptionForm({
         <Textarea id="notes" name="notes" defaultValue={defaultValues?.notes ?? ""} rows={3} />
       </div>
 
-      {state.error && <p className="text-sm text-red-600">{state.error}</p>}
-      <Button type="submit" disabled={isPending}>
-        {isPending ? "Speichern…" : submitLabel}
-      </Button>
+      {(state.error || duplicateState.error) && (
+        <p className="text-sm text-red-600">{state.error || duplicateState.error}</p>
+      )}
+      <div className="flex items-center gap-2">
+        <Button type="submit" disabled={isPending || isDuplicatePending}>
+          {isPending ? "Speichern…" : submitLabel}
+        </Button>
+        {duplicateAction && (
+          <Button
+            type="submit"
+            formAction={duplicateFormAction}
+            variant="secondary"
+            disabled={isPending || isDuplicatePending}
+          >
+            {isDuplicatePending ? "Wird angelegt…" : "Duplizieren"}
+          </Button>
+        )}
+      </div>
+      {duplicateAction && (
+        <p className="text-xs text-muted-foreground">
+          Duplizieren legt ein neues Abo mit den obigen (auch geänderten) Werten an — das aktuelle
+          bleibt unverändert erhalten.
+        </p>
+      )}
     </form>
   );
 }

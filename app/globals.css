@@ -2,7 +2,10 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* .midnight is also "dark" from a dark:-utility point of view (glass panels
+   etc. should stay in their subtle/translucent form, not the light theme's
+   more opaque one) - it just carries a different accent/backdrop on top. */
+@custom-variant dark (&:is(.dark *, .midnight *));
 
 @theme inline {
   --color-background: var(--background);
@@ -49,13 +52,63 @@
 }
 
 /*
- * Single "glassmorphism" theme: a deep indigo→violet gradient backdrop with
- * frosted-glass surfaces, white text, and a pink→blue accent. There is no
- * light mode — the app is always dark (`.dark` is hardcoded on <html>), so the
- * :root and .dark palettes are intentionally identical and both are defined so
- * the many `dark:` utility variants across the app resolve correctly.
+ * "Glassmorphism" theme, now in three variants: .dark (original, unchanged:
+ * deep indigo→violet gradient, frosted-glass surfaces, white text, pink
+ * accent), :root/light (new pastel companion, same hue family, dark-indigo
+ * text, more opaque glass since a 10% white veil disappears on a light
+ * background), and .midnight (new, see below: navy + gold, a moodier third
+ * option). --chart-* stay identical everywhere; --primary/--ring/
+ * --primary-gradient-* differ only for .midnight (gold instead of pink).
  */
-:root,
+:root {
+  --background: #f5f3ff;
+  --foreground: #1e1b4b;
+  --card: #ffffff;
+  --card-foreground: #1e1b4b;
+  --popover: #ffffff;
+  --popover-foreground: #1e1b4b;
+  --primary: #f472b6;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(30, 27, 75, 0.06);
+  --secondary-foreground: #1e1b4b;
+  --muted: rgba(30, 27, 75, 0.05);
+  --muted-foreground: rgba(30, 27, 75, 0.65);
+  --accent: rgba(30, 27, 75, 0.08);
+  --accent-foreground: #1e1b4b;
+  --destructive: #dc2626;
+  --border: rgba(30, 27, 75, 0.12);
+  --input: rgba(30, 27, 75, 0.08);
+  --ring: #f472b6;
+  --chart-1: #f472b6;
+  --chart-2: #60a5fa;
+  --chart-3: #a78bfa;
+  --chart-4: #34d399;
+  --chart-5: #fbbf24;
+  --radius: 0.9rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1e1b4b;
+  --sidebar-primary: #f472b6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(30, 27, 75, 0.08);
+  --sidebar-accent-foreground: #1e1b4b;
+  --sidebar-border: rgba(30, 27, 75, 0.12);
+  --sidebar-ring: #f472b6;
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-ring: rgba(30, 27, 75, 0.08);
+  --primary-gradient-from: #f472b6;
+  --primary-gradient-to: #ec4899;
+  --primary-shadow: rgba(236, 72, 153, 0.35);
+  --body-gradient: linear-gradient(
+    135deg,
+    #f5f3ff 0%,
+    #ede9fe 25%,
+    #fce7f3 50%,
+    #fbcfe8 75%,
+    #e0e7ff 100%
+  );
+  --orb-opacity: 0.25;
+}
+
 .dark {
   --background: #1e1b4b;
   --foreground: #ffffff;
@@ -89,6 +142,71 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(255, 255, 255, 0.18);
   --sidebar-ring: #f472b6;
+  --glass-bg: rgba(255, 255, 255, 0.1);
+  --glass-ring: rgba(255, 255, 255, 0.15);
+  --primary-gradient-from: #f472b6;
+  --primary-gradient-to: #ec4899;
+  --primary-shadow: rgba(236, 72, 153, 0.4);
+  --body-gradient: linear-gradient(
+    135deg,
+    #1e1b4b 0%,
+    #312e81 25%,
+    #4c1d95 50%,
+    #7c3aed 75%,
+    #6366f1 100%
+  );
+  --orb-opacity: 0.55;
+}
+
+/*
+ * Third theme, on request: a moodier, more restrained "midnight" companion
+ * modeled on claudekit's 3D-hyperrealism reference (navy + metallic gold) -
+ * same reference .dark in monatsausgaben-app/diktiertool used, reused here
+ * as a third option rather than replacing the existing vivid indigo/pink
+ * .dark. Solid navy instead of a gradient (the reference itself uses a flat
+ * #1a1a2e, not a gradient) - a plain dark backdrop is what reads as "really
+ * darker" next to the busier violet/pink .dark gradient.
+ */
+.midnight {
+  --background: #1a1a2e;
+  --foreground: #f5f0e6;
+  --card: #f5f0e6;
+  --card-foreground: #f5f0e6;
+  --popover: #20203a;
+  --popover-foreground: #f5f0e6;
+  --primary: #d4af37;
+  --primary-foreground: #1a1a2e;
+  --secondary: rgba(212, 175, 55, 0.1);
+  --secondary-foreground: #f5f0e6;
+  --muted: rgba(245, 240, 230, 0.08);
+  --muted-foreground: rgba(245, 240, 230, 0.65);
+  --accent: rgba(212, 175, 55, 0.12);
+  --accent-foreground: #f5f0e6;
+  --destructive: #fb7185;
+  --border: rgba(212, 175, 55, 0.2);
+  --input: rgba(245, 240, 230, 0.12);
+  --ring: #d4af37;
+  --chart-1: #d4af37;
+  --chart-2: #60a5fa;
+  --chart-3: #a78bfa;
+  --chart-4: #34d399;
+  --chart-5: #f4d160;
+  --radius: 0.9rem;
+  --sidebar: #20203a;
+  --sidebar-foreground: #f5f0e6;
+  --sidebar-primary: #d4af37;
+  --sidebar-primary-foreground: #1a1a2e;
+  --sidebar-accent: rgba(212, 175, 55, 0.12);
+  --sidebar-accent-foreground: #f5f0e6;
+  --sidebar-border: rgba(212, 175, 55, 0.2);
+  --sidebar-ring: #d4af37;
+  --glass-bg: rgba(245, 240, 230, 0.06);
+  --glass-ring: rgba(212, 175, 55, 0.18);
+  --primary-gradient-from: #f4d160;
+  --primary-gradient-to: #a08628;
+  --primary-shadow: rgba(212, 175, 55, 0.4);
+  --body-gradient: linear-gradient(180deg, #1a1a2e 0%, #16162a 100%);
+  --orb-opacity: 0.2;
 }
 
 @layer base {
@@ -97,16 +215,8 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image: linear-gradient(
-      135deg,
-      #1e1b4b 0%,
-      #312e81 25%,
-      #4c1d95 50%,
-      #7c3aed 75%,
-      #6366f1 100%
-    );
+    background-image: var(--body-gradient);
     background-attachment: fixed;
-    background-color: #1e1b4b;
   }
   html {
     @apply font-sans;
@@ -126,7 +236,7 @@
   position: absolute;
   border-radius: 50%;
   filter: blur(80px);
-  opacity: 0.55;
+  opacity: var(--orb-opacity);
   animation: float 20s ease-in-out infinite;
 }
 
@@ -136,6 +246,20 @@
   background: linear-gradient(135deg, #ec4899, #f472b6);
   top: -200px;
   right: -200px;
+}
+
+/* .midnight recolors the orbs to warm gold/bronze tones instead of the
+   pink/blue/violet mix - at any opacity, that rainbow combination fights the
+   restrained "moodier, really darker" navy/gold identity the user asked for
+   here (the reference itself has no decorative color blobs at all). */
+.midnight .orb-1 {
+  background: linear-gradient(135deg, #a08628, #d4af37);
+}
+.midnight .orb-2 {
+  background: linear-gradient(135deg, #8b6914, #c9a876);
+}
+.midnight .orb-3 {
+  background: linear-gradient(135deg, #6b5010, #a08628);
 }
 
 .orb-2 {

@@ -5,6 +5,7 @@ import { countNotifications } from "@/lib/db/queries";
 import { signOut } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { UpdateBadge } from "@/components/layout/update-badge";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { CURRENT_VERSION } from "@/lib/version";
 import { BellIcon } from "lucide-react";
 
@@ -26,7 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <nav className="flex items-center gap-6">
             <Link
               href="/"
-              className="bg-gradient-to-r from-[#f472b6] to-[#60a5fa] bg-clip-text text-lg font-extrabold text-transparent"
+              className="bg-gradient-to-r from-(--primary-gradient-from) to-(--primary-gradient-to) bg-clip-text text-lg font-extrabold text-transparent"
             >
               Abo-Tracker
             </Link>
@@ -57,6 +58,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             )}
           </nav>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <Link
               href="/benachrichtigungen"
               aria-label="Benachrichtigungen"

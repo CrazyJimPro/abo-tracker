@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
+import { ThemeProvider } from "next-themes";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -27,15 +28,25 @@ export default function RootLayout({
     <html
       lang="de"
       suppressHydrationWarning
-      className={`dark ${jakarta.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${jakarta.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <div className="bg-orbs" aria-hidden="true">
-          <div className="orb orb-1" />
-          <div className="orb orb-2" />
-          <div className="orb orb-3" />
-        </div>
-        {children}
+        {/* defaultTheme="dark": das war bisher die einzige Optik, bestehende
+            Nutzer sollen beim ersten Besuch nach diesem Update nicht
+            ueberrascht plötzlich im Hellen landen. */}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+          themes={["light", "dark", "midnight"]}
+        >
+          <div className="bg-orbs" aria-hidden="true">
+            <div className="orb orb-1" />
+            <div className="orb orb-2" />
+            <div className="orb orb-3" />
+          </div>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

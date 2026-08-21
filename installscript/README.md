@@ -81,6 +81,15 @@ scripts/stop-prod.sh           # Server stoppen
 tail -f prod-server.log        # Log mitlesen
 ```
 
+## Update
+
+Der Header zeigt neben der laufenden Version, ob ein neueres Release verfügbar
+ist. Der Check fragt dafür direkt GitHubs Releases-API ab (unauthentifiziert,
+das Repo ist öffentlich) — ist eine neuere Version da, erscheint ein
+Hinweis-Badge, z.B. „Update verfügbar: v1.2.0", ein Klick darauf öffnet die
+passende Release-Seite auf GitHub. Ist GitHub gerade nicht erreichbar, bleibt
+der Badge einfach weg — kein Fehler, keine blockierte Seite.
+
 Auf den neuesten Stand bringen — die Installation bleibt dabei erhalten,
 Datenbank und Konten werden nicht angefasst:
 
@@ -89,6 +98,11 @@ cd ~/abo-tracker
 git pull
 ./installscript/install.sh
 ```
+
+`install.sh` danach nicht durch ein bloßes `git pull` ersetzen, auch wenn das
+oft reichen würde — es installiert bei Bedarf auch neue Abhängigkeiten und
+wendet neue Datenbank-Migrationen an, ist aber schnell durchgelaufen, wenn
+sich nichts geändert hat.
 
 ## Backup
 

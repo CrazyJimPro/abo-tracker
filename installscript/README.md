@@ -238,3 +238,4 @@ von einer Deinstallation siehe [Backup](#backup) oben.
 | `Datenbank nicht gefunden` | Der Server wurde aus dem falschen Verzeichnis gestartet. `scripts/start-prod.sh` benutzen. |
 | `kill $(cat .server.pid)` sagt `No such process` | Der Server läuft schon nicht mehr, `.server.pid` war nur veraltet — kein Fehler. `scripts/stop-prod.sh` benutzen, das prüft den tatsächlichen Zustand statt der Datei blind zu vertrauen. |
 | Seite lädt nicht | `tail -20 prod-server.log` zeigt den Grund. |
+| Design-Wahl (hell/dunkel/midnight) merkt sich Firefox nicht über einen Neustart hinweg | Passiert typischerweise beim Zugriff über `localhost` oder eine reine IP-Adresse, wenn in Firefox „Cookies und Website-Daten löschen, wenn Firefox beendet wird" aktiv ist. `install.sh` zeigt am Ende automatisch die passenden zwei Befehle (fester Hostname in `/etc/hosts` + `scripts/firefox-persist-fix.sh <hostname>`), falls noch nicht eingerichtet. |

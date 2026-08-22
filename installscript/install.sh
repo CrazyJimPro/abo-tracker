@@ -352,6 +352,21 @@ fi
 printf '\n  Stoppen:  kill $(cat .server.pid)\n'
 printf '  Log:      prod-server.log\n\n'
 
+# Nur ein Hinweis, kein automatischer sudo-Aufruf (gleiches Prinzip wie beim
+# apt-install-Hinweis oben) - und nur zeigen, wenn noch nicht eingerichtet.
+LAN_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+LAN_HOSTNAME=abo.local
+if [ -n "$LAN_IP" ] && ! getent hosts "$LAN_HOSTNAME" >/dev/null 2>&1; then
+  printf '  %sZugriff von anderen Geräten im selben Netzwerk (optional):%s\n' "$DIM" "$RESET"
+  printf '      %sFirefox löscht bei einer reinen IP-Adresse mitunter lokal\n' "$DIM"
+  printf '      gespeicherte Einstellungen (z.B. die Design-Wahl) beim Beenden.\n'
+  printf '      Ein fester Hostname umgeht das:%s\n' "$RESET"
+  printf "      echo -e '%s\\\\t%s' | sudo tee -a /etc/hosts\n" "$LAN_IP" "$LAN_HOSTNAME"
+  printf '      %sFalls "Cookies und Website-Daten beim Beenden löschen" in Firefox\n' "$DIM"
+  printf '      aktiv ist, zusätzlich (Firefox davor komplett beenden):%s\n' "$RESET"
+  printf '      scripts/firefox-persist-fix.sh %s\n\n' "$LAN_HOSTNAME"
+fi
+
 if $OPEN_BROWSER && [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] && command -v xdg-open >/dev/null 2>&1; then
   xdg-open "$URL" >/dev/null 2>&1 &
 fi

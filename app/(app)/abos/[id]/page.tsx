@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { getSubscription, listVisibleCategories } from "@/lib/db/queries";
 import {
@@ -32,6 +34,13 @@ export default async function SubscriptionDetailPage({
     <div className="space-y-6">
       <Card className="max-w-lg">
         <CardHeader>
+          <Link
+            href="/abos"
+            className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Zurück
+          </Link>
           <CardTitle>{subscription.name}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

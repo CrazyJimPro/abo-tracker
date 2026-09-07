@@ -143,10 +143,44 @@ export const subscriptions = sqliteTable(
   ]
 );
 
+// One row per known price point of a subscription. "initial" is written once
+// when the subscription is created, "auto" whenever an edit changes `amount`,
+// "manual" when the user backfills a price they remember from before this
+// feature existed.
+export const priceHistory = sqliteTable(
+  "price_history",
+  {
+    id: text("id").primaryKey(),
+    subscriptionId: text("subscription_id")
+      .notNull()
+      .references(() => subscriptions.id, { onDelete: "cascade" }),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    amount: real("amount").notNull(),
+    changedAt: text("changed_at").notNull(),
+    source: text("source").notNull().default("manual").$type<PriceHistorySource>(),
+    note: text("note"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (t) => [
+    index("price_history_subscription_id_idx").on(t.subscriptionId, t.changedAt),
+    check("price_history_amount_check", sql`${t.amount} >= 0`),
+    check(
+      "price_history_source_check",
+      sql`${t.source} in ('initial', 'auto', 'manual')`
+    ),
+  ]
+);
+
 export type UserRole = "admin" | "member";
 export type BillingInterval = "weekly" | "monthly" | "quarterly" | "yearly";
 export type SubscriptionStatus = "active" | "paused" | "cancelled";
+export type PriceHistorySource = "initial" | "auto" | "manual";
 
 export type User = typeof users.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type Subscription = typeof subscriptions.$inferSelect;
+export type PriceHistoryEntry = typeof priceHistory.$inferSelect;

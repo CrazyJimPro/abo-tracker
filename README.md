@@ -5,6 +5,12 @@ sehen, was das alles pro Monat kostet. Next.js mit lokaler SQLite-Datenbank —
 kein Cloud-Dienst, keine Accounts irgendwo draußen, alle Daten bleiben in
 `data/abo-tracker.db`.
 
+Im Reiter **Historie** lässt sich außerdem der Preisverlauf jedes Abos
+(aktiv wie gekündigt) einsehen — inklusive Vergleich "vor 12 Monaten vs.
+heute", um Preiserhöhungen auf einen Blick zu erkennen. Preisänderungen
+werden beim Bearbeiten eines Abos automatisch erfasst; ältere Preise lassen
+sich manuell nachtragen und jederzeit korrigieren.
+
 ## Installation
 
 Auf einem frischen Rechner genügt dieser eine Befehl im Terminal:

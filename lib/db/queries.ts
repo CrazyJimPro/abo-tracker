@@ -5,9 +5,11 @@ import { and, asc, eq, gte, isNotNull, isNull, like, lte, ne, or, sql } from "dr
 import { db } from "./index";
 import {
   categories,
+  priceHistory,
   subscriptions,
   users,
   type BillingInterval,
+  type PriceHistorySource,
   type SubscriptionStatus,
   type UserRole,
 } from "./schema";
@@ -209,17 +211,52 @@ export function findMatchingSubscription(userId: string, values: SubscriptionVal
 // by id next time instead of relying on findMatchingSubscription above).
 // Generates a fresh one otherwise, same as before.
 export function insertSubscription(userId: string, values: SubscriptionValues, id: string = newId()) {
-  db.insert(subscriptions)
-    .values({ id, ownerId: userId, ...values })
-    .run();
+  db.transaction((tx) => {
+    tx.insert(subscriptions)
+      .values({ id, ownerId: userId, ...values })
+      .run();
+    tx.insert(priceHistory)
+      .values({
+        id: newId(),
+        subscriptionId: id,
+        ownerId: userId,
+        amount: values.amount,
+        changedAt: nowIso().slice(0, 10),
+        source: "initial",
+      })
+      .run();
+  });
   return id;
 }
 
+// Writes the update and, when `amount` actually changed, appends a
+// price_history row in the same transaction so the two never drift apart.
 export function updateSubscription(userId: string, id: string, values: SubscriptionValues) {
-  db.update(subscriptions)
-    .set({ ...values, updatedAt: nowIso() })
-    .where(and(eq(subscriptions.id, id), eq(subscriptions.ownerId, userId)))
-    .run();
+  db.transaction((tx) => {
+    const current = tx
+      .select({ amount: subscriptions.amount })
+      .from(subscriptions)
+      .where(and(eq(subscriptions.id, id), eq(subscriptions.ownerId, userId)))
+      .get();
+
+    tx.update(subscriptions)
+      .set({ ...values, updatedAt: nowIso() })
+      .where(and(eq(subscriptions.id, id), eq(subscriptions.ownerId, userId)))
+      .run();
+
+    if (current && current.amount !== values.amount) {
+      tx.insert(priceHistory)
+        .values({
+          id: newId(),
+          subscriptionId: id,
+          ownerId: userId,
+          amount: values.amount,
+          changedAt: nowIso().slice(0, 10),
+          source: "auto",
+        })
+        .run();
+    }
+  });
 }
 
 export function deleteSubscription(userId: string, id: string) {
@@ -232,6 +269,57 @@ export function setNextBillingDate(userId: string, id: string, nextBillingDate: 
   db.update(subscriptions)
     .set({ nextBillingDate, updatedAt: nowIso() })
     .where(and(eq(subscriptions.id, id), eq(subscriptions.ownerId, userId)))
+    .run();
+}
+
+// ---------- price history ----------
+
+export function getPriceHistoryForSubscription(userId: string, subscriptionId: string) {
+  return db
+    .select()
+    .from(priceHistory)
+    .where(and(eq(priceHistory.subscriptionId, subscriptionId), eq(priceHistory.ownerId, userId)))
+    .orderBy(asc(priceHistory.changedAt), asc(priceHistory.createdAt))
+    .all();
+}
+
+export function insertPriceHistoryEntry(
+  userId: string,
+  subscriptionId: string,
+  values: { amount: number; changedAt: string; source?: PriceHistorySource; note?: string | null }
+) {
+  const id = newId();
+  db.insert(priceHistory)
+    .values({
+      id,
+      subscriptionId,
+      ownerId: userId,
+      amount: values.amount,
+      changedAt: values.changedAt,
+      source: values.source ?? "manual",
+      note: values.note ?? null,
+    })
+    .run();
+  return id;
+}
+
+// Corrects an existing entry's amount/date — used to fix a price change that
+// was auto-captured on the day it was *edited in the app* rather than the day
+// it actually took effect (or to fix a mistyped manual backfill).
+export function updatePriceHistoryEntry(
+  userId: string,
+  entryId: string,
+  values: { amount: number; changedAt: string }
+) {
+  db.update(priceHistory)
+    .set(values)
+    .where(and(eq(priceHistory.id, entryId), eq(priceHistory.ownerId, userId)))
+    .run();
+}
+
+export function deletePriceHistoryEntry(userId: string, entryId: string) {
+  db.delete(priceHistory)
+    .where(and(eq(priceHistory.id, entryId), eq(priceHistory.ownerId, userId)))
     .run();
 }
 

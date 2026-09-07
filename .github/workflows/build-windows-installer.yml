@@ -1,0 +1,48 @@
+name: Windows-Installer bauen
+
+# Baut installscript/windows/setup.iss zu AboTrackerSetup.exe. windows-latest
+# bringt Inno Setup bereits mit (siehe actions/runner-images) — ein
+# Choco-Fallback greift nur, falls sich das mal ändert.
+#
+# - Push eines v*-Tags: baut UND hängt die .exe als Asset an das zugehörige
+#   GitHub Release an (existiert das Release schon, wird nur das Asset
+#   ergänzt).
+# - workflow_dispatch: baut nur, Ergebnis als Artifact zum Herunterladen —
+#   praktisch für einen Testlauf auf einer VM ohne gleich ein Release zu
+#   berühren.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Inno Setup compilieren
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup -y --no-progress
+            $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          }
+          & $iscc "installscript\windows\setup.iss"
+          if ($LASTEXITCODE -ne 0) { throw "ISCC fehlgeschlagen." }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AboTrackerSetup
+          path: installscript/windows/dist/AboTrackerSetup.exe
+
+      - name: An GitHub Release anhängen
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: installscript/windows/dist/AboTrackerSetup.exe

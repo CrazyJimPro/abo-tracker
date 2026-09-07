@@ -1,0 +1,96 @@
+; Abo-Tracker — Windows-Installer (Inno Setup).
+;
+; Erzeugt eine einzige AboTrackerSetup.exe, die Node.js (portabel, ohne
+; Systemeingriff), die App-Abhängigkeiten und die lokale SQLite-Datenbank
+; einrichtet, die App baut, den Server startet und einen Autostart-Eintrag
+; (Aufgabenplanung, "bei Login") anlegt. Windows-Pendant zu
+; ../install.sh + ../bootstrap.sh.
+;
+; Bauen (auf Windows, oder z.B. via GitHub Actions windows-latest-Runner):
+;   iscc installscript\windows\setup.iss
+; Ergebnis liegt danach in installscript\windows\dist\AboTrackerSetup.exe.
+;
+; Der Installer selbst enthält keinen App-Code — er lädt ihn bei der
+; Installation von GitHub (wie bootstrap.sh unter Linux), braucht also eine
+; Internetverbindung. Das hält den Installer klein und die Installation
+; immer auf dem neuesten main-Stand.
+
+#define MyAppName "Abo-Tracker"
+#define MyAppVersion "1.6.0"
+#define MyAppPublisher "Abo-Tracker"
+#define MyAppURL "https://github.com/CrazyJimPro/abo-tracker"
+
+[Setup]
+AppId={{6E1D9B2A-6B1B-4B8C-9C7F-ABO7TRACKER01}}
+AppName={#MyAppName}
+AppVersion={#MyAppVersion}
+AppPublisher={#MyAppPublisher}
+AppPublisherURL={#MyAppURL}
+DefaultDirName={localappdata}\Abo-Tracker
+DefaultGroupName=Abo-Tracker
+DisableProgramGroupPage=yes
+; Keine Admin-Rechte nötig — Installation landet unter %LOCALAPPDATA%,
+; Node läuft portabel, der Autostart-Task ist ein Benutzer-Task.
+PrivilegesRequired=lowest
+OutputDir=dist
+OutputBaseFilename=AboTrackerSetup
+Compression=lzma2
+SolidCompression=yes
+WizardStyle=modern
+UninstallDisplayIcon={app}\installscript\windows\uninstall.ps1
+
+[Files]
+Source: "find-node.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
+Source: "bootstrap.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
+Source: "install.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
+Source: "start-prod.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
+Source: "stop-prod.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
+Source: "uninstall.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
+
+[Icons]
+Name: "{group}\Abo-Tracker öffnen"; Filename: "http://localhost:3200"
+Name: "{group}\Abo-Tracker starten"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installscript\windows\start-prod.ps1"""
+Name: "{group}\Abo-Tracker stoppen"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installscript\windows\stop-prod.ps1"""
+Name: "{group}\Deinstallieren"; Filename: "{uninstallexe}"
+
+[Run]
+Filename: "powershell.exe"; \
+    Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installscript\windows\bootstrap.ps1"" -InstallDir ""{app}"" -Email ""{code:GetAdminEmail}"""; \
+    StatusMsg: "Abo-Tracker wird eingerichtet (Node.js, Abhängigkeiten, Datenbank) — das kann einige Minuten dauern …"; \
+    Flags: runascurrentuser waituntilterminated
+
+[UninstallRun]
+Filename: "powershell.exe"; \
+    Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installscript\windows\uninstall.ps1"""; \
+    Flags: runascurrentuser waituntilterminated
+
+[Code]
+var
+  AdminEmailPage: TInputQueryWizardPage;
+
+procedure InitializeWizard;
+begin
+  AdminEmailPage := CreateInputQueryPage(wpSelectDir,
+    'Admin-Zugang', 'E-Mail-Adresse für den Admin-Account',
+    'Wird nur beim allerersten Setup verwendet, um den Admin-Account anzulegen. ' +
+    'Bei einer Aktualisierung einer bestehenden Installation bleibt sie unbenutzt.');
+  AdminEmailPage.Add('E-Mail:', False);
+end;
+
+function GetAdminEmail(Param: string): string;
+begin
+  Result := AdminEmailPage.Values[0];
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  Result := True;
+  if CurPageID = AdminEmailPage.ID then
+  begin
+    if (Pos('@', AdminEmailPage.Values[0]) = 0) then
+    begin
+      MsgBox('Bitte eine gültige E-Mail-Adresse eingeben (nur nötig, falls noch kein Admin-Account existiert).', mbError, MB_OK);
+      Result := False;
+    end;
+  end;
+end;

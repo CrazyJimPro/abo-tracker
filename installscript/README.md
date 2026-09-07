@@ -32,7 +32,28 @@ cd abo-tracker
 ./installscript/install.sh
 ```
 
-## Was dabei passiert
+## Windows
+
+Für Windows gibt es einen eigenen Installer statt der Bash-Scripts: siehe
+[`windows/`](windows/). Ein Doppelklick auf `AboTrackerSetup.exe` installiert
+Node.js portabel (kein Systemeingriff, keine Admin-Rechte nötig), lädt den
+App-Code von GitHub, installiert Abhängigkeiten, legt Datenbank und
+Admin-Konto an, baut die App, startet den Server und richtet den Autostart
+bei Login über die Aufgabenplanung ein — inhaltlich dasselbe wie
+`bootstrap.sh` + `install.sh`, nur als grafischer Windows-Installer.
+
+Die `.exe` selbst muss einmalig mit [Inno Setup](https://jrsoftware.org/isinfo.php)
+gebaut werden (auf Windows, oder z.B. via GitHub Actions `windows-latest`):
+
+```powershell
+iscc installscript\windows\setup.iss
+```
+
+Ergebnis liegt danach unter `installscript\windows\dist\AboTrackerSetup.exe`.
+Details, Autostart-Verwaltung und Deinstallation stehen in
+[`windows/README.md`](windows/README.md).
+
+## Was dabei passiert (Linux)
 
 | Schritt | Inhalt |
 | --- | --- |

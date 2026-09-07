@@ -18,6 +18,7 @@ function findProjectRoot(): string {
 }
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   env: {
     PROJECT_ROOT: findProjectRoot(),
   },

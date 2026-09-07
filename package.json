@@ -3,8 +3,8 @@
   "version": "1.6.0",
   "private": true,
   "scripts": {
-    "dev": "NODE_OPTIONS=--dns-result-order=ipv4first next dev",
-    "build": "NODE_OPTIONS=--dns-result-order=ipv4first next build",
+    "dev": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first next dev",
+    "build": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first next build",
     "start": "next start",
     "lint": "eslint",
     "db:migrate": "drizzle-kit migrate",
@@ -37,6 +37,7 @@
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^7.0.3",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",

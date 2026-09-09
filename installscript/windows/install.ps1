@@ -264,7 +264,6 @@ process.stdout.write(row ? row.email : "");
     # ------------------------------------------------------------ Build ---
 
     Write-Step "App bauen"
-    Write-Host "DEBUG: PROCESSOR_ARCHITECTURE=$env:PROCESSOR_ARCHITECTURE PROCESSOR_ARCHITEW6432=$env:PROCESSOR_ARCHITEW6432 PSVersion=$($PSVersionTable.PSVersion) is64BitProcess=$([Environment]::Is64BitProcess)"
 
     $existingProc = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($existingProc) {
@@ -273,33 +272,17 @@ process.stdout.write(row ? row.email : "");
         Start-Sleep -Seconds 1
     }
 
-    # Turbopack kann den Build sporadisch mit "Cannot find module
-    # 'better-sqlite3-<hash>'" abbrechen, obwohl exakt derselbe Build in
-    # einem frischen Prozess Sekunden später klaglos funktioniert — es hängt
-    # also am (vermutlich konsolenlosen) Prozesskontext, in dem der Installer
-    # selbst läuft, nicht an einem Timing-Fenster. Ein Retry in dem eigenen,
-    # bereits betroffenen PowerShell-Prozess bringt daher nichts; jeder
-    # Versuch läuft deshalb in einem eigenen, frisch gestarteten
-    # powershell.exe-Kindprozess.
-    $buildLog = Join-Path $env:TEMP "abo-tracker-build-$([guid]::NewGuid()).log"
-    $buildAttempts = 0
-    do {
-        $buildAttempts++
-        Remove-Item (Join-Path $ProjectDir ".next") -Recurse -Force -ErrorAction SilentlyContinue
-        # Start-Process statt "&" — das gibt dem Build-Prozess eine eigene,
-        # neue Konsole statt die (vermutlich konsolenlose) des Installers zu
-        # erben, was der eigentliche Unterschied zwischen einem fehlschlagenden
-        # und einem klaglos funktionierenden Build zu sein scheint.
-        $buildProc = Start-Process -FilePath "powershell.exe" `
-            -ArgumentList @("-NoProfile", "-Command", "Set-Location -LiteralPath '$ProjectDir'; & '$Npm' run build") `
-            -WindowStyle Hidden -PassThru -Wait `
-            -RedirectStandardOutput $buildLog -RedirectStandardError "$buildLog.err"
-        Get-Content $buildLog, "$buildLog.err" -ErrorAction SilentlyContinue | Write-Host
-        Remove-Item $buildLog, "$buildLog.err" -Force -ErrorAction SilentlyContinue
-        if ($buildProc.ExitCode -eq 0) { break }
-        if ($buildAttempts -ge 3) { throw "Build fehlgeschlagen." }
-        Write-Note "Build fehlgeschlagen, erneuter Versuch ($buildAttempts/3) …"
-    } while ($true)
+    # --webpack statt des seit Next.js 16 für "next build" defaultmäßigen
+    # Turbopack: Turbopack brach den Build reproduzierbar mit "Cannot find
+    # module 'better-sqlite3-<hash>'" ab, sobald der Installer selbst (statt
+    # einer normalen interaktiven Shell) der aufrufende Prozess war — ein
+    # Timing-Fenster, ein Retry im selben oder einem frischen Prozess und
+    # sogar ein Fix der Installer-eigenen 32-Bit/WOW64-Prozessumgebung
+    # änderten daran nichts, alles deutet auf einen Turbopack-eigenen Bug bei
+    # der Auflösung nativer Module in dieser Konstellation hin. Klassisches
+    # Webpack baut exakt denselben Code zuverlässig.
+    & $Npm run build -- --webpack
+    if ($LASTEXITCODE -ne 0) { throw "Build fehlgeschlagen." }
     Write-Ok "Build fertig"
 
     # ------------------------------------------------------------ Start ---

@@ -62,16 +62,22 @@ Name: "{group}\Abo-Tracker starten"; Filename: "powershell.exe"; Parameters: "-N
 Name: "{group}\Abo-Tracker stoppen"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installscript\windows\stop-prod.ps1"""
 Name: "{group}\Deinstallieren"; Filename: "{uninstallexe}"
 
+; "64bit" schaltet für diesen einen Aufruf die WOW64-Dateisystem-Umleitung ab
+; — sonst liefert "powershell.exe" (ohne Pfad, wie Setup.exe selbst ein
+; 32-Bit-Prozess) die 32-Bit-PowerShell aus SysWOW64 statt der echten
+; 64-Bit-PowerShell (siehe Kommentar bei ArchitecturesInstallIn64BitMode oben).
+; Betrifft nur [Run]/[UninstallRun] — die [Icons]-Verknüpfungen oben werden
+; später vom Explorer (immer 64-Bit) gestartet, nicht von Setup.exe.
 [Run]
 Filename: "powershell.exe"; \
     Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installscript\windows\bootstrap.ps1"" -InstallDir ""{app}"" -Email ""{code:GetAdminEmail}"""; \
     StatusMsg: "Abo-Tracker wird eingerichtet (Node.js, Abhängigkeiten, Datenbank) — das kann einige Minuten dauern …"; \
-    Flags: runascurrentuser waituntilterminated
+    Flags: runascurrentuser waituntilterminated 64bit
 
 [UninstallRun]
 Filename: "powershell.exe"; \
     Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installscript\windows\uninstall.ps1"""; \
-    Flags: runascurrentuser waituntilterminated
+    Flags: runascurrentuser waituntilterminated 64bit
 
 [Code]
 var

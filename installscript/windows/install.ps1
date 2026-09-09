@@ -215,9 +215,11 @@ try {
     # Muss im Projektordner liegen — siehe Kommentar beim
     # better-sqlite3-Ladetest weiter oben (require()-Auflösung).
     $adminCheckScript = Join-Path $ProjectDir ".abo-tracker-admin-check.js"
+    # argv[1] ist bei einer Skriptdatei (anders als bei -e) deren eigener
+    # Pfad — das erste echte Argument ist argv[2].
     Set-Content -Path $adminCheckScript -Encoding utf8 -Value @'
 const Database = require("better-sqlite3");
-const db = new Database(process.argv[1], { readonly: true });
+const db = new Database(process.argv[2], { readonly: true });
 const row = db.prepare("select email from users where role = ? order by created_at limit 1").get("admin");
 process.stdout.write(row ? row.email : "");
 '@

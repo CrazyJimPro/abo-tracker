@@ -348,6 +348,13 @@ process.stdout.write(row ? row.email : "");
         Write-Host "  Passwort: $adminPassword" -ForegroundColor White
         Write-Host "            Wird beim ersten Login abgefragt und muss dann geändert werden."
         Write-Host "            Dieses Passwort wird nirgends noch einmal angezeigt."
+
+        # Das Konsolenfenster, in dem dieses Script läuft, schließt sich
+        # sofort nach dem [Run]-Schritt von setup.iss — ohne das hier würde
+        # das Passwort nur ganz kurz sichtbar aufblitzen. setup.iss liest
+        # diese Datei danach aus, zeigt sie in einem Dialog an und löscht sie
+        # anschließend wieder (Klartext-Passwort soll nicht liegen bleiben).
+        Set-Content -Path (Join-Path $ProjectDir ".admin-credentials.txt") -Encoding utf8 -Value "$Email`n$adminPassword"
     } elseif ($existingAdmin) {
         Write-Host "  Login:    $existingAdmin (bestehendes Passwort)"
     }

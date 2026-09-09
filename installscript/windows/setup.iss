@@ -109,3 +109,34 @@ begin
     end;
   end;
 end;
+
+// Das Konsolenfenster von install.ps1 (aus dem [Run]-Schritt oben) schließt
+// sich sofort nach dem Skript wieder — ein frisch generiertes Passwort wäre
+// dort nur einen Wimpernschlag lang sichtbar. install.ps1 legt es deshalb in
+// {app}\.admin-credentials.txt ab; hier wird es in einem Dialog angezeigt,
+// den man aktiv wegklicken muss, und die Datei danach sofort gelöscht —
+// das Klartext-Passwort soll nicht auf der Platte liegen bleiben.
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  CredFile: string;
+  Lines: TArrayOfString;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    CredFile := ExpandConstant('{app}\.admin-credentials.txt');
+    if FileExists(CredFile) then
+    begin
+      if LoadStringsFromFile(CredFile, Lines) and (GetArrayLength(Lines) >= 2) then
+      begin
+        MsgBox(
+          'Abo-Tracker ist eingerichtet.' + #13#10 + #13#10 +
+          'Login:    ' + Lines[0] + #13#10 +
+          'Passwort: ' + Lines[1] + #13#10 + #13#10 +
+          'Wird beim ersten Login abgefragt und muss dann geändert werden.' + #13#10 +
+          'Dieses Passwort wird nirgends noch einmal angezeigt — jetzt notieren!',
+          mbInformation, MB_OK);
+      end;
+      DeleteFile(CredFile);
+    end;
+  end;
+end;

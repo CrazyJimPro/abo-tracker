@@ -22,6 +22,10 @@
 prod-server.log
 .server.pid
 
+# Windows installer: transient handoff of a freshly generated admin
+# password from install.ps1 to setup.iss's post-install dialog
+.admin-credentials.txt
+
 # local database — real data and password hashes, never commit
 /data
 

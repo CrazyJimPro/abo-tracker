@@ -112,9 +112,19 @@ Write-Step "Abhängigkeiten installieren"
 Write-Note "better-sqlite3 wird dabei ggf. kompiliert, das kann etwas dauern."
 
 function Write-MissingBuildToolsHint {
-    Write-Note "better-sqlite3 muss nativen Code kompilieren, dafür fehlen die Visual Studio Build Tools."
-    Write-Note "Installieren (braucht Admin-Rechte, ca. 2-4 GB):"
-    Write-Note "  winget install --id Microsoft.VisualStudio.2022.BuildTools --override ""--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"""
+    param([string]$Output = "")
+
+    Write-Note "better-sqlite3 muss nativen Code kompilieren, dafür fehlt Werkzeug dafür."
+    $showVs = -not $Output -or $Output -match "Could not find any Visual Studio installation"
+    $showPython = -not $Output -or $Output -match "Could not find any Python installation"
+    if ($showVs) {
+        Write-Note "Visual Studio Build Tools installieren (braucht Admin-Rechte, ca. 2-4 GB):"
+        Write-Note "  winget install --id Microsoft.VisualStudio.2022.BuildTools --override ""--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"""
+    }
+    if ($showPython) {
+        Write-Note "Python installieren (wird von node-gyp zum Kompilieren gebraucht):"
+        Write-Note "  winget install --id Python.Python.3.12"
+    }
     Write-Note "Danach diesen Installer/install.ps1 erneut ausführen."
 }
 
@@ -142,8 +152,8 @@ try {
         $ErrorActionPreference = $prevEap
     }
     if ($LASTEXITCODE -ne 0) {
-        if ($npmOutput -match "Could not find any Visual Studio installation" -or $npmOutput -match "node-gyp") {
-            Write-MissingBuildToolsHint
+        if ($npmOutput -match "node-gyp") {
+            Write-MissingBuildToolsHint -Output ($npmOutput -join "`n")
         }
         throw "npm install fehlgeschlagen."
     }

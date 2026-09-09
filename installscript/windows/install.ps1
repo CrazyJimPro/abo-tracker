@@ -148,7 +148,20 @@ try {
         throw "npm install fehlgeschlagen."
     }
 
-    & $Node -e 'new (require("better-sqlite3"))(":memory:").close()' 2>$null
+    # Als Datei statt per -e '...' aufrufen: Windows PowerShell 5.1 verliert beim
+    # Aufbau der Kommandozeile für native Programme zuverlässig eingebettete
+    # doppelte Anführungszeichen in einfach gequoteten -e-Argumenten (aus
+    # ":memory:" wird memory: → Syntaxfehler im Node-Code).
+    $sqliteCheckScript = Join-Path $env:TEMP "abo-tracker-sqlite-check.js"
+    Set-Content -Path $sqliteCheckScript -Value 'new (require("better-sqlite3"))(":memory:").close();' -Encoding utf8
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        & $Node $sqliteCheckScript 2>$null
+    } finally {
+        $ErrorActionPreference = $prevEap
+        Remove-Item $sqliteCheckScript -Force -ErrorAction SilentlyContinue
+    }
     if ($LASTEXITCODE -ne 0) {
         Write-Note "better-sqlite3 lässt sich nicht laden."
         Write-MissingBuildToolsHint
@@ -187,12 +200,21 @@ try {
     $dbPath = if ($dbPathRaw) { ($dbPathRaw -split '=', 2)[1].Trim() } else { "data/abo-tracker.db" }
     if (-not [System.IO.Path]::IsPathRooted($dbPath)) { $dbPath = Join-Path $ProjectDir $dbPath }
 
-    $existingAdmin = & $Node -e @'
+    # Als Datei statt per -e @'...'@ aufrufen — siehe Kommentar beim
+    # better-sqlite3-Ladetest weiter oben (PowerShell 5.1 verschluckt
+    # eingebettete doppelte Anführungszeichen in nativen Kommandozeilen).
+    $adminCheckScript = Join-Path $env:TEMP "abo-tracker-admin-check.js"
+    Set-Content -Path $adminCheckScript -Encoding utf8 -Value @'
 const Database = require("better-sqlite3");
 const db = new Database(process.argv[1], { readonly: true });
 const row = db.prepare("select email from users where role = ? order by created_at limit 1").get("admin");
 process.stdout.write(row ? row.email : "");
-'@ $dbPath
+'@
+    try {
+        $existingAdmin = & $Node $adminCheckScript $dbPath
+    } finally {
+        Remove-Item $adminCheckScript -Force -ErrorAction SilentlyContinue
+    }
 
     $adminPassword = ""
     if ($existingAdmin) {

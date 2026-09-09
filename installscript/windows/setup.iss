@@ -16,7 +16,7 @@
 ; immer auf dem neuesten main-Stand.
 
 #define MyAppName "Abo-Tracker"
-#define MyAppVersion "1.6.0"
+#define MyAppVersion "1.6.1"
 #define MyAppPublisher "Abo-Tracker"
 #define MyAppURL "https://github.com/CrazyJimPro/abo-tracker"
 

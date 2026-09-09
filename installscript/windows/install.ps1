@@ -264,6 +264,7 @@ process.stdout.write(row ? row.email : "");
     # ------------------------------------------------------------ Build ---
 
     Write-Step "App bauen"
+    Write-Host "DEBUG: PROCESSOR_ARCHITECTURE=$env:PROCESSOR_ARCHITECTURE PROCESSOR_ARCHITEW6432=$env:PROCESSOR_ARCHITEW6432 PSVersion=$($PSVersionTable.PSVersion) is64BitProcess=$([Environment]::Is64BitProcess)"
 
     $existingProc = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($existingProc) {

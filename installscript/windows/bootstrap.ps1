@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 Abo-Tracker — Einstieg für einen frischen Windows-Rechner.
 

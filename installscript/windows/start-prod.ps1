@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 Startet den Produktionsserver im Hintergrund (Windows-Pendant zu
 ../../scripts/start-prod.sh). Wird sowohl von install.ps1 als auch von der

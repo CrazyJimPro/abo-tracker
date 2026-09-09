@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 Abo-Tracker — Komplett-Installation unter Windows.
 

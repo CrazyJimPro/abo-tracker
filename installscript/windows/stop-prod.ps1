@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 Stoppt den von start-prod.ps1 gestarteten Server, falls einer läuft.
 Windows-Pendant zu ../../scripts/stop-prod.sh.

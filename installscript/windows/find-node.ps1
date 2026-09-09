@@ -1,4 +1,4 @@
-# Gemeinsame Node-Auflösung, per Dot-Source von install.ps1 und start-prod.ps1
+﻿# Gemeinsame Node-Auflösung, per Dot-Source von install.ps1 und start-prod.ps1
 # eingebunden. Pendant zu ../find-node.sh.
 #
 # Bevorzugt wird die portable Node-Installation unter node-runtime\ im

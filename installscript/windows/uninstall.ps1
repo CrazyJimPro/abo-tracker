@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 Wird vom Inno-Setup-Uninstaller aufgerufen (setup.iss, [UninstallRun]), bevor
 er die Programmdateien entfernt: stoppt den Server und löscht den

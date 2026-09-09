@@ -106,6 +106,76 @@ $env:Path = "$NodeDir;$env:Path"
 $nodeVersionOutput = & $Node -v
 Write-Ok "Node $nodeVersionOutput  ($Node)"
 
+# ------------------------------------------------------ Build-Werkzeuge ---
+
+# better-sqlite3 hat keine vorkompilierten Windows-Binaries und kompiliert bei
+# jeder Installation nativen Code — dafür braucht node-gyp sowohl die Visual
+# Studio Build Tools als auch Python. Beide fehlen auf einem frischen Windows-
+# Rechner fast immer; statt erst mitten in "npm install" mit einer kryptischen
+# gyp-Fehlermeldung aufzugeben, wird hier vorab geprüft und bei Bedarf über
+# winget automatisch nachinstalliert, damit die Installation in einem
+# Durchgang durchläuft.
+
+function Test-VSBuildToolsAvailable {
+    $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
+    if (-not (Test-Path $vswhere)) { return $false }
+    $path = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
+    return [bool]$path
+}
+
+function Test-PythonAvailable {
+    if (Get-Command py -ErrorAction SilentlyContinue) { return $true }
+    if (Get-Command python -ErrorAction SilentlyContinue) { return $true }
+    # winget aktualisiert das System-PATH, aber dieser bereits laufende
+    # Prozess sieht davon nichts — deshalb zusätzlich direkt in den üblichen
+    # Installationsordnern nachsehen (dieselben, die node-gyp selbst absucht).
+    $candidates = Get-ChildItem "$env:LOCALAPPDATA\Programs\Python" -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match '^Python3\d\d$' }
+    foreach ($c in $candidates) {
+        if (Test-Path (Join-Path $c.FullName "python.exe")) { return $true }
+    }
+    return $false
+}
+
+Write-Step "Build-Werkzeuge prüfen"
+
+if (Test-VSBuildToolsAvailable) {
+    Write-Ok "Visual Studio Build Tools vorhanden"
+} else {
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        throw "Visual Studio Build Tools fehlen und winget ist nicht verfügbar. Bitte manuell installieren: https://visualstudio.microsoft.com/visual-cpp-build-tools/"
+    }
+    Write-Note "Visual Studio Build Tools fehlen — werden jetzt automatisch installiert."
+    Write-Note "Das braucht eine Admin-Bestätigung (UAC) und kann einige Minuten dauern …"
+    & winget install --id Microsoft.VisualStudio.2022.BuildTools --accept-package-agreements --accept-source-agreements `
+        --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+    if ($LASTEXITCODE -ne 0 -or -not (Test-VSBuildToolsAvailable)) {
+        throw "Visual Studio Build Tools konnten nicht automatisch installiert werden. Bitte manuell: winget install --id Microsoft.VisualStudio.2022.BuildTools --override ""--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"""
+    }
+    Write-Ok "Visual Studio Build Tools installiert"
+}
+
+if (Test-PythonAvailable) {
+    Write-Ok "Python vorhanden"
+} else {
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        throw "Python fehlt und winget ist nicht verfügbar. Bitte manuell installieren: https://www.python.org/downloads/"
+    }
+    Write-Note "Python fehlt (wird von node-gyp zum Kompilieren gebraucht) — wird jetzt automatisch installiert."
+    & winget install --id Python.Python.3.12 --accept-package-agreements --accept-source-agreements
+    if ($LASTEXITCODE -ne 0 -or -not (Test-PythonAvailable)) {
+        throw "Python konnte nicht automatisch installiert werden. Bitte manuell: winget install --id Python.Python.3.12"
+    }
+    # winget aktualisiert nur das System-PATH (Registry) — dieser bereits
+    # laufende Prozess bekommt das nicht automatisch mit, würde node-gyp
+    # also "python" trotz erfolgreicher Installation nicht finden lassen.
+    $newPython = Get-ChildItem "$env:LOCALAPPDATA\Programs\Python" -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match '^Python3\d\d$' } |
+        Sort-Object Name -Descending | Select-Object -First 1
+    if ($newPython) { $env:Path = "$($newPython.FullName);$env:Path" }
+    Write-Ok "Python installiert"
+}
+
 # ---------------------------------------------------------- Abhängigkeiten ---
 
 Write-Step "Abhängigkeiten installieren"

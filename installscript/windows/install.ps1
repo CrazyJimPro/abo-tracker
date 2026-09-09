@@ -111,26 +111,43 @@ Write-Ok "Node $nodeVersionOutput  ($Node)"
 Write-Step "Abhängigkeiten installieren"
 Write-Note "better-sqlite3 wird dabei ggf. kompiliert, das kann etwas dauern."
 
+function Write-MissingBuildToolsHint {
+    Write-Note "better-sqlite3 muss nativen Code kompilieren, dafür fehlen die Visual Studio Build Tools."
+    Write-Note "Installieren (braucht Admin-Rechte, ca. 2-4 GB):"
+    Write-Note "  winget install --id Microsoft.VisualStudio.2022.BuildTools --override ""--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"""
+    Write-Note "Danach diesen Installer/install.ps1 erneut ausführen."
+}
+
 Push-Location $ProjectDir
 try {
     Remove-Item Env:\NODE_ENV -ErrorAction SilentlyContinue
 
     if (Test-Path "package-lock.json") {
-        & $Npm ci --no-audit --no-fund
+        & $Npm ci --no-audit --no-fund 2>&1 | Tee-Object -Variable npmOutput
         if ($LASTEXITCODE -ne 0) {
             Write-Note "npm ci fehlgeschlagen, versuche npm install …"
-            & $Npm install --no-audit --no-fund
-            if ($LASTEXITCODE -ne 0) { throw "npm install fehlgeschlagen." }
+            & $Npm install --no-audit --no-fund 2>&1 | Tee-Object -Variable npmOutput
+            if ($LASTEXITCODE -ne 0) {
+                if ($npmOutput -match "Could not find any Visual Studio installation" -or $npmOutput -match "node-gyp") {
+                    Write-MissingBuildToolsHint
+                }
+                throw "npm install fehlgeschlagen."
+            }
         }
     } else {
-        & $Npm install --no-audit --no-fund
-        if ($LASTEXITCODE -ne 0) { throw "npm install fehlgeschlagen." }
+        & $Npm install --no-audit --no-fund 2>&1 | Tee-Object -Variable npmOutput
+        if ($LASTEXITCODE -ne 0) {
+            if ($npmOutput -match "Could not find any Visual Studio installation" -or $npmOutput -match "node-gyp") {
+                Write-MissingBuildToolsHint
+            }
+            throw "npm install fehlgeschlagen."
+        }
     }
 
     & $Node -e 'new (require("better-sqlite3"))(":memory:").close()' 2>$null
     if ($LASTEXITCODE -ne 0) {
         Write-Note "better-sqlite3 lässt sich nicht laden."
-        Write-Note "Meist fehlen die Visual Studio Build Tools (Workload 'Desktop development with C++')."
+        Write-MissingBuildToolsHint
         throw "Abhängigkeiten sind unvollständig."
     }
     Write-Ok "Pakete installiert"

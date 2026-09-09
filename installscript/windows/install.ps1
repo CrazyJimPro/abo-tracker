@@ -124,8 +124,15 @@ function Test-VSBuildToolsAvailable {
 }
 
 function Test-PythonAvailable {
-    if (Get-Command py -ErrorAction SilentlyContinue) { return $true }
-    if (Get-Command python -ErrorAction SilentlyContinue) { return $true }
+    # Get-Command "python"/"py" allein reicht nicht: ohne echtes Python
+    # installiert liegt unter WindowsApps ein "App Execution Alias"-Stub mit
+    # genau diesem Namen, der beim Ausführen nur den Microsoft Store öffnet.
+    # Get-Command findet den Namen trotzdem klaglos — deshalb Treffer aus
+    # WindowsApps explizit ausschließen.
+    foreach ($cmd in @("py", "python", "python3")) {
+        $found = Get-Command $cmd -ErrorAction SilentlyContinue
+        if ($found -and $found.Source -notmatch '\\WindowsApps\\') { return $true }
+    }
     # winget aktualisiert das System-PATH, aber dieser bereits laufende
     # Prozess sieht davon nichts — deshalb zusätzlich direkt in den üblichen
     # Installationsordnern nachsehen (dieselben, die node-gyp selbst absucht).

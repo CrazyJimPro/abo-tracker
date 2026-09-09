@@ -16,7 +16,7 @@
 ; immer auf dem neuesten main-Stand.
 
 #define MyAppName "Abo-Tracker"
-#define MyAppVersion "1.6.2"
+#define MyAppVersion "1.6.3"
 #define MyAppPublisher "Abo-Tracker"
 #define MyAppURL "https://github.com/CrazyJimPro/abo-tracker"
 
@@ -110,6 +110,29 @@ begin
   end;
 end;
 
+// MsgBox() ist ein normaler Windows-MessageBox-Dialog — Text darin lässt sich
+// nicht mit der Maus markieren, nur die gesamte Meldung per Strg+C kopieren
+// (kaum bekannt). Statt sich darauf zu verlassen, wird das Passwort hier
+// direkt in die Zwischenablage kopiert: eine Datei mit dem Passwort wird von
+// PowerShell eingelesen und per Set-Clipboard übernommen — nie über eine
+// Kommandozeile, damit Sonderzeichen im generierten Passwort (&, ^, $, ...)
+// nicht als Shell-Syntax fehlinterpretiert werden können.
+procedure CopyToClipboard(Text: string);
+var
+  TempFile: string;
+  ResultCode: Integer;
+begin
+  TempFile := ExpandConstant('{tmp}\abo-tracker-pw.txt');
+  SaveStringToFile(TempFile, Text, False);
+  // {sysnative} statt {sys}: Setup.exe bleibt trotz 64-Bit-Installationsmodus
+  // ein 32-Bit-Prozess — "powershell.exe" würde sonst per WOW64-Umleitung auf
+  // die 32-Bit-PowerShell aus SysWOW64 zeigen (siehe Kommentar weiter oben).
+  Exec(ExpandConstant('{sysnative}\WindowsPowerShell\v1.0\powershell.exe'),
+    '-NoProfile -Command "Get-Content -Raw -LiteralPath ''' + TempFile + ''' | Set-Clipboard"',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  DeleteFile(TempFile);
+end;
+
 // Das Konsolenfenster von install.ps1 (aus dem [Run]-Schritt oben) schließt
 // sich sofort nach dem Skript wieder — ein frisch generiertes Passwort wäre
 // dort nur einen Wimpernschlag lang sichtbar. install.ps1 legt es deshalb in
@@ -128,12 +151,15 @@ begin
     begin
       if LoadStringsFromFile(CredFile, Lines) and (GetArrayLength(Lines) >= 2) then
       begin
+        CopyToClipboard(Lines[1]);
         MsgBox(
           'Abo-Tracker ist eingerichtet.' + #13#10 + #13#10 +
           'Login:    ' + Lines[0] + #13#10 +
           'Passwort: ' + Lines[1] + #13#10 + #13#10 +
+          '(Das Passwort steht bereits in der Zwischenablage — nach dem ' +
+          'Schließen dieses Fensters direkt mit Strg+V einfügen.)' + #13#10 + #13#10 +
           'Wird beim ersten Login abgefragt und muss dann geändert werden.' + #13#10 +
-          'Dieses Passwort wird nirgends noch einmal angezeigt — jetzt notieren!',
+          'Dieses Passwort wird nirgends noch einmal angezeigt!',
           mbInformation, MB_OK);
       end;
       DeleteFile(CredFile);

@@ -189,6 +189,15 @@ try {
 
     Write-Step "Datenbank anlegen / aktualisieren"
 
+    $dbPathRaw = (Get-Content $envLocal | Where-Object { $_ -match '^\s*DATABASE_PATH\s*=' } | Select-Object -Last 1)
+    $dbPath = if ($dbPathRaw) { ($dbPathRaw -split '=', 2)[1].Trim() } else { "data/abo-tracker.db" }
+    if (-not [System.IO.Path]::IsPathRooted($dbPath)) { $dbPath = Join-Path $ProjectDir $dbPath }
+
+    # better-sqlite3 legt die Datenbankdatei selbst an, aber nicht deren
+    # Elternordner — /data existiert in einem frischen Checkout nicht
+    # (steht in .gitignore, siehe ../install.sh Zeile mit "mkdir -p").
+    New-Item -ItemType Directory -Path (Split-Path -Parent $dbPath) -Force | Out-Null
+
     & $Npm run db:migrate
     if ($LASTEXITCODE -ne 0) { throw "Migration fehlgeschlagen." }
     Write-Ok "Migrationen angewendet"
@@ -199,10 +208,6 @@ try {
     # ----------------------------------------------------- Admin-Konto ---
 
     Write-Step "Admin-Konto"
-
-    $dbPathRaw = (Get-Content $envLocal | Where-Object { $_ -match '^\s*DATABASE_PATH\s*=' } | Select-Object -Last 1)
-    $dbPath = if ($dbPathRaw) { ($dbPathRaw -split '=', 2)[1].Trim() } else { "data/abo-tracker.db" }
-    if (-not [System.IO.Path]::IsPathRooted($dbPath)) { $dbPath = Join-Path $ProjectDir $dbPath }
 
     # Als Datei statt per -e @'...'@ aufrufen — siehe Kommentar beim
     # better-sqlite3-Ladetest weiter oben (PowerShell 5.1 verschluckt

@@ -272,8 +272,23 @@ process.stdout.write(row ? row.email : "");
         Start-Sleep -Seconds 1
     }
 
-    & $Npm run build
-    if ($LASTEXITCODE -ne 0) { throw "Build fehlgeschlagen." }
+    # Direkt nach npm install ist die frisch geschriebene better-sqlite3
+    # .node-Datei auf Windows manchmal noch nicht sofort greifbar (Dateisystem-
+    # Cache/Virenscanner) — Turbopack bricht dann mit "Cannot find module
+    # 'better-sqlite3-<hash>'" ab, obwohl ein Build Sekunden später klaglos
+    # funktioniert. Ein kurzer Retry fängt das ab, ohne das eigentliche
+    # Problem (ein Timing-Fenster, kein Code-Fehler) durch längeres Warten
+    # pauschal verzögern zu müssen.
+    $buildAttempts = 0
+    do {
+        $buildAttempts++
+        & $Npm run build
+        if ($LASTEXITCODE -eq 0) { break }
+        if ($buildAttempts -ge 3) { throw "Build fehlgeschlagen." }
+        Write-Note "Build fehlgeschlagen, erneuter Versuch in 5s ($buildAttempts/3) …"
+        Remove-Item (Join-Path $ProjectDir ".next") -Recurse -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 5
+    } while ($true)
     Write-Ok "Build fertig"
 
     # ------------------------------------------------------------ Start ---

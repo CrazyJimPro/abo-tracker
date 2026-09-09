@@ -122,26 +122,30 @@ Push-Location $ProjectDir
 try {
     Remove-Item Env:\NODE_ENV -ErrorAction SilentlyContinue
 
-    if (Test-Path "package-lock.json") {
-        & $Npm ci --no-audit --no-fund 2>&1 | Tee-Object -Variable npmOutput
-        if ($LASTEXITCODE -ne 0) {
-            Write-Note "npm ci fehlgeschlagen, versuche npm install …"
-            & $Npm install --no-audit --no-fund 2>&1 | Tee-Object -Variable npmOutput
+    # npm schreibt Warnungen nach stderr; unter $ErrorActionPreference =
+    # "Stop" würde ein 2>&1-Redirect jede einzelne Zeile davon in einen
+    # abbrechenden Fehler verwandeln (PowerShell-5.1-Eigenheit bei nativen
+    # Programmen). Deshalb hier kurzzeitig auf "Continue" schalten.
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        if (Test-Path "package-lock.json") {
+            & $Npm ci --no-audit --no-fund 2>&1 | Tee-Object -Variable npmOutput
             if ($LASTEXITCODE -ne 0) {
-                if ($npmOutput -match "Could not find any Visual Studio installation" -or $npmOutput -match "node-gyp") {
-                    Write-MissingBuildToolsHint
-                }
-                throw "npm install fehlgeschlagen."
+                Write-Note "npm ci fehlgeschlagen, versuche npm install …"
+                & $Npm install --no-audit --no-fund 2>&1 | Tee-Object -Variable npmOutput
             }
+        } else {
+            & $Npm install --no-audit --no-fund 2>&1 | Tee-Object -Variable npmOutput
         }
-    } else {
-        & $Npm install --no-audit --no-fund 2>&1 | Tee-Object -Variable npmOutput
-        if ($LASTEXITCODE -ne 0) {
-            if ($npmOutput -match "Could not find any Visual Studio installation" -or $npmOutput -match "node-gyp") {
-                Write-MissingBuildToolsHint
-            }
-            throw "npm install fehlgeschlagen."
+    } finally {
+        $ErrorActionPreference = $prevEap
+    }
+    if ($LASTEXITCODE -ne 0) {
+        if ($npmOutput -match "Could not find any Visual Studio installation" -or $npmOutput -match "node-gyp") {
+            Write-MissingBuildToolsHint
         }
+        throw "npm install fehlgeschlagen."
     }
 
     & $Node -e 'new (require("better-sqlite3"))(":memory:").close()' 2>$null

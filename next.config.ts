@@ -19,6 +19,14 @@ function findProjectRoot(): string {
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // better-sqlite3 ist ein natives Addon (kompilierte .node-Datei) — ohne
+  // diese Ausnahme versucht Turbopack, es wie normalen JS-Code zu bündeln
+  // und ihm beim Server-Build einen internen Hash-Namen zu geben. Das
+  // Auflösen dieses Hash-Namens schlägt dann bei der Seiten-Daten-Sammlung
+  // fehl ("Cannot find module 'better-sqlite3-<hash>'"), z. B. für
+  // /api/export. serverExternalPackages weist Next.js an, das Paket mit
+  // einem normalen require() aus node_modules zu laden statt es zu bündeln.
+  serverExternalPackages: ["better-sqlite3"],
   env: {
     PROJECT_ROOT: findProjectRoot(),
   },

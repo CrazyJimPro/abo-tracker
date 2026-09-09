@@ -220,7 +220,7 @@ else
   BOOTSTRAP_OUTPUT=$("$NODE" $NODE_TS_FLAGS scripts/bootstrap-admin.ts "$ADMIN_EMAIL")
   # Das Passwort wird nur hier ein einziges Mal ausgegeben — es liegt danach
   # ausschließlich als scrypt-Hash in der Datenbank.
-  ADMIN_PASSWORD=$(printf '%s\n' "$BOOTSTRAP_OUTPUT" | sed -n 's/^Temporäres Passwort: //p')
+  ADMIN_PASSWORD=$(printf '%s\n' "$BOOTSTRAP_OUTPUT" | sed -n 's/^TEMP_PASSWORD=//p')
   ok "Admin angelegt: $ADMIN_EMAIL"
 fi
 

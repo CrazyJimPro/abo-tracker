@@ -52,6 +52,12 @@ async function main() {
   console.log(`Admin-User ${ADMIN_EMAIL} angelegt.`);
   console.log(`Temporäres Passwort: ${tempPassword}`);
   console.log("Beim ersten Login wirst du aufgefordert, es zu ändern.");
+  // ASCII-Marker zusätzlich zur deutschen Zeile oben: install.sh/install.ps1
+  // parsen diese Zeile, um das Passwort herauszulösen. Rein textbasiertes
+  // Parsen der deutschen Zeile ist auf Windows anfällig für Codepage-/
+  // Unicode-Normalisierungs-Mismatches zwischen Node-Ausgabe und dem
+  // Such-Pattern im Installer-Skript.
+  console.log(`TEMP_PASSWORD=${tempPassword}`);
 }
 
 main();

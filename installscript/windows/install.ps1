@@ -241,8 +241,13 @@ process.stdout.write(row ? row.email : "");
 
         $bootstrapOutput = & $Npm run bootstrap-admin --silent -- $Email
         if ($LASTEXITCODE -ne 0) { throw "Admin-Anlage fehlgeschlagen." }
-        $passwordLine = $bootstrapOutput | Where-Object { $_ -match '^Temporäres Passwort: ' } | Select-Object -Last 1
-        $adminPassword = if ($passwordLine) { $passwordLine -replace '^Temporäres Passwort: ', '' } else { "" }
+        # ASCII-Marker statt der deutschen Zeile: unter Windows PowerShell 5.1
+        # kann die Ausgabe eines Kindprozesses auf eine Art decodiert werden,
+        # die visuell korrekt aussieht, aber nicht Unicode-normalisierungs-
+        # gleich mit dem Literal im Skript ist — das ließ dieses Pattern auf
+        # "Temporäres Passwort: " zuverlässig ins Leere laufen.
+        $passwordLine = $bootstrapOutput | Where-Object { $_ -match '^TEMP_PASSWORD=' } | Select-Object -Last 1
+        $adminPassword = if ($passwordLine) { $passwordLine -replace '^TEMP_PASSWORD=', '' } else { "" }
         Write-Ok "Admin angelegt: $Email"
     }
 

@@ -33,7 +33,19 @@ function createDb() {
 // reload would open another handle to the same file.
 const globalForDb = globalThis as unknown as { __aboTrackerDb?: ReturnType<typeof createDb> };
 
-export const db = globalForDb.__aboTrackerDb ?? createDb();
+// `next build` imports every route module to collect its metadata (which
+// exports exist, whether it's static/dynamic) — it never actually calls a
+// route handler. A top-level `createDb()` call would still run at that point
+// though, opening a real database connection during the build itself. That
+// breaks a first-time install (the database doesn't exist yet at that stage)
+// and is fragile under Turbopack, whose module resolution for native addons
+// like better-sqlite3 differs between the build phase and the running
+// server. Since nothing touches `db` outside of request handling, it's safe
+// to simply skip creating it during this phase.
+export const db =
+  process.env.NEXT_PHASE === "phase-production-build"
+    ? (undefined as unknown as ReturnType<typeof createDb>)
+    : (globalForDb.__aboTrackerDb ?? createDb());
 
 if (process.env.NODE_ENV !== "production") globalForDb.__aboTrackerDb = db;
 

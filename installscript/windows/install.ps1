@@ -272,22 +272,32 @@ process.stdout.write(row ? row.email : "");
         Start-Sleep -Seconds 1
     }
 
-    # Direkt nach npm install ist die frisch geschriebene better-sqlite3
-    # .node-Datei auf Windows manchmal noch nicht sofort greifbar (Dateisystem-
-    # Cache/Virenscanner) — Turbopack bricht dann mit "Cannot find module
-    # 'better-sqlite3-<hash>'" ab, obwohl ein Build Sekunden später klaglos
-    # funktioniert. Ein kurzer Retry fängt das ab, ohne das eigentliche
-    # Problem (ein Timing-Fenster, kein Code-Fehler) durch längeres Warten
-    # pauschal verzögern zu müssen.
+    # Turbopack kann den Build sporadisch mit "Cannot find module
+    # 'better-sqlite3-<hash>'" abbrechen, obwohl exakt derselbe Build in
+    # einem frischen Prozess Sekunden später klaglos funktioniert — es hängt
+    # also am (vermutlich konsolenlosen) Prozesskontext, in dem der Installer
+    # selbst läuft, nicht an einem Timing-Fenster. Ein Retry in dem eigenen,
+    # bereits betroffenen PowerShell-Prozess bringt daher nichts; jeder
+    # Versuch läuft deshalb in einem eigenen, frisch gestarteten
+    # powershell.exe-Kindprozess.
+    $buildLog = Join-Path $env:TEMP "abo-tracker-build-$([guid]::NewGuid()).log"
     $buildAttempts = 0
     do {
         $buildAttempts++
-        & $Npm run build
-        if ($LASTEXITCODE -eq 0) { break }
-        if ($buildAttempts -ge 3) { throw "Build fehlgeschlagen." }
-        Write-Note "Build fehlgeschlagen, erneuter Versuch in 5s ($buildAttempts/3) …"
         Remove-Item (Join-Path $ProjectDir ".next") -Recurse -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 5
+        # Start-Process statt "&" — das gibt dem Build-Prozess eine eigene,
+        # neue Konsole statt die (vermutlich konsolenlose) des Installers zu
+        # erben, was der eigentliche Unterschied zwischen einem fehlschlagenden
+        # und einem klaglos funktionierenden Build zu sein scheint.
+        $buildProc = Start-Process -FilePath "powershell.exe" `
+            -ArgumentList @("-NoProfile", "-Command", "Set-Location -LiteralPath '$ProjectDir'; & '$Npm' run build") `
+            -WindowStyle Hidden -PassThru -Wait `
+            -RedirectStandardOutput $buildLog -RedirectStandardError "$buildLog.err"
+        Get-Content $buildLog, "$buildLog.err" -ErrorAction SilentlyContinue | Write-Host
+        Remove-Item $buildLog, "$buildLog.err" -Force -ErrorAction SilentlyContinue
+        if ($buildProc.ExitCode -eq 0) { break }
+        if ($buildAttempts -ge 3) { throw "Build fehlgeschlagen." }
+        Write-Note "Build fehlgeschlagen, erneuter Versuch ($buildAttempts/3) …"
     } while ($true)
     Write-Ok "Build fertig"
 

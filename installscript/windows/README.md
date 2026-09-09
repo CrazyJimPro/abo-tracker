@@ -34,23 +34,47 @@ braucht also eine Internetverbindung.
 | --- | --- |
 | 1 | App-Code von GitHub holen (`bootstrap.ps1`) nach `%LOCALAPPDATA%\Abo-Tracker` |
 | 2 | Node.js suchen (>= 22.18), sonst portabel nach `node-runtime\` laden — kein Systemeingriff |
-| 3 | Abhängigkeiten installieren (`npm ci`) |
-| 4 | `.env.local` aus `.env.example` anlegen, falls sie fehlt |
-| 5 | Datenbank anlegen und Standard-Kategorien einspielen |
-| 6 | Admin-Konto erstellen (E-Mail wird im Installer-Wizard abgefragt), temporäres Passwort ausgeben |
-| 7 | App bauen |
-| 8 | Server starten (Port 3200) |
-| 9 | Autostart einrichten (Aufgabenplanung, Trigger "bei Login") |
+| 3 | Build-Werkzeuge prüfen: Visual Studio Build Tools + Python (siehe unten), fehlende Teile per winget nachinstallieren |
+| 4 | Abhängigkeiten installieren (`npm ci`) |
+| 5 | `.env.local` aus `.env.example` anlegen, falls sie fehlt |
+| 6 | Datenbank anlegen und Standard-Kategorien einspielen |
+| 7 | Admin-Konto erstellen (E-Mail wird im Installer-Wizard abgefragt) |
+| 8 | App bauen |
+| 9 | Server starten (Port 3200) |
+| 10 | Autostart einrichten (Aufgabenplanung, Trigger "bei Login") |
+| 11 | Temporäres Passwort in die Zwischenablage kopieren und in einem Dialog anzeigen |
 
 Kein Node-Handbetrieb nötig: `install.ps1` lädt bei Bedarf automatisch die
 aktuell passende Node-LTS-Version von nodejs.org und legt sie portabel unter
 `node-runtime\` im Projektordner ab — eine eventuell bereits vorhandene,
 andere Node-Installation auf dem Rechner bleibt unangetastet.
 
+### Build-Werkzeuge (Visual Studio Build Tools + Python)
+
+`better-sqlite3` hat keine vorkompilierten Windows-Binaries und kompiliert bei
+jeder Installation nativen Code — dafür braucht `node-gyp` sowohl die Visual
+Studio Build Tools (Workload "Desktop development with C++") als auch Python.
+Fehlt eines von beiden, installiert `install.ps1` es automatisch über
+`winget`:
+
+```powershell
+winget install --id Microsoft.VisualStudio.2022.BuildTools --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+winget install --id Python.Python.3.12
+```
+
+Die Build-Tools-Installation self-elevated über ihre eigene UAC-Abfrage —
+`install.ps1` selbst bleibt dabei unprivilegiert. Das kann beim ersten Mal
+mehrere Minuten dauern; ein zweiter Installer-Lauf überspringt diesen Schritt,
+sobald beides erkannt wird. Schlägt die automatische Installation fehl (z. B.
+kein `winget` vorhanden), bricht der Installer mit dem jeweiligen
+`winget`-Befehl zum manuellen Nachholen ab.
+
 ## Direkt nach der Installation
 
 1. **Einloggen** unter <http://localhost:3200> mit der im Installer
-   angegebenen E-Mail und dem temporären Passwort aus der Installer-Ausgabe.
+   angegebenen E-Mail. Das temporäre Passwort steht am Ende in einem Dialog
+   und ist zu diesem Zeitpunkt bereits in der Zwischenablage — einfach mit
+   Strg+V ins Passwortfeld einfügen. Es wird nirgends noch einmal angezeigt.
 2. **Passwort ändern.** Die App verlangt das beim ersten Login von sich aus.
 
 Laufender Betrieb:
@@ -99,7 +123,8 @@ ausführen, bevor der reguläre Deinstaller läuft.
 
 | Symptom | Ursache und Abhilfe |
 | --- | --- |
-| `better-sqlite3 lässt sich nicht laden` | Meist fehlen die Visual Studio Build Tools (Workload "Desktop development with C++") für einen Fallback-Build des nativen Moduls. |
+| `better-sqlite3 lässt sich nicht laden` / `npm install fehlgeschlagen` | Normalerweise fängt Schritt 3 (siehe oben) das ab. Bricht es trotzdem ab, fehlt meist `winget` selbst, oder die automatische Installation wurde abgebrochen (z. B. UAC-Dialog weggeklickt) — der Installer nennt dann den passenden `winget install`-Befehl zum manuellen Nachholen. |
 | Server startet nicht | `prod-server.err.log` im Projektordner zeigt den Grund. |
-| Autostart-Task fehlt nach einem Windows-Update | `installscript\windows\install.ps1` erneut ausführen — legt den Task neu an. |
+| `install.log` fehlt oder zeigt nichts Hilfreiches | Liegt im Projektordner (`%LOCALAPPDATA%\Abo-Tracker\install.log`) — enthält die komplette Ausgabe von `bootstrap.ps1`/`install.ps1`, auch wenn das Konsolenfenster sich schon geschlossen hat. |
+| Autostart-Task fehlt nach einem Windows-Update | `installscript\windows\install.ps1` erneut ausführen — legt den Task neu an. Schlägt die Task-Registrierung fehl (z. B. Gruppenrichtlinie), bricht das die Installation nicht ab, nur der Autostart fehlt dann. |
 | Port 3200 belegt | `installscript\windows\start-prod.ps1 -Port 3300` (und beim nächsten `install.ps1`-Lauf ebenfalls `-Port 3300` mitgeben). |

@@ -313,15 +313,25 @@ process.stdout.write(row ? row.email : "");
     Write-Step "Autostart"
 
     if (-not $NoAutostart) {
-        $taskName = "AboTracker"
-        $action = New-ScheduledTaskAction -Execute "powershell.exe" `
-            -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$WindowsDir\start-prod.ps1`" -Port $Port"
-        $trigger = New-ScheduledTaskTrigger -AtLogOn
-        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
+        # Best-effort: Autostart ist ein Komfort-Feature, kein kritischer
+        # Installationsschritt. Manche Umgebungen (Gruppenrichtlinien,
+        # eingeschränkte Sitzungen) verweigern Register-ScheduledTask den
+        # Zugriff — das soll dann nicht die sonst erfolgreiche Installation
+        # als Ganzes scheitern lassen.
+        try {
+            $taskName = "AboTracker"
+            $action = New-ScheduledTaskAction -Execute "powershell.exe" `
+                -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$WindowsDir\start-prod.ps1`" -Port $Port"
+            $trigger = New-ScheduledTaskTrigger -AtLogOn
+            $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
 
-        Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
-        Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -ErrorAction Stop | Out-Null
-        Write-Ok "Autostart eingerichtet (Aufgabenplanung: $taskName, startet bei Login)"
+            Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
+            Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -ErrorAction Stop | Out-Null
+            Write-Ok "Autostart eingerichtet (Aufgabenplanung: $taskName, startet bei Login)"
+        } catch {
+            Write-Note "Autostart konnte nicht eingerichtet werden ($($_.Exception.Message))."
+            Write-Note "Manuell starten mit: installscript\windows\start-prod.ps1"
+        }
     } else {
         Write-Note "Kein Autostart. Manuell starten mit: installscript\windows\start-prod.ps1"
     }

@@ -32,6 +32,15 @@ DisableProgramGroupPage=yes
 ; Keine Admin-Rechte nötig — Installation landet unter %LOCALAPPDATA%,
 ; Node läuft portabel, der Autostart-Task ist ein Benutzer-Task.
 PrivilegesRequired=lowest
+; Ohne das läuft Setup.exe (und alles, was es via [Run] mit "powershell.exe"
+; startet) als 32-Bit-Prozess unter WOW64 — Windows leitet "powershell.exe"
+; dann per Dateisystem-Umleitung auf die 32-Bit-PowerShell aus SysWOW64 um
+; statt die echte 64-Bit-PowerShell zu nehmen. Das führte zu einem
+; sporadischen, aber reproduzierbaren Build-Fehler in Turbopacks nativer
+; Modul-Auflösung (better-sqlite3), obwohl Node selbst weiterhin korrekt als
+; 64-Bit-Prozess lief.
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir=dist
 OutputBaseFilename=AboTrackerSetup
 Compression=lzma2

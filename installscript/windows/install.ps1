@@ -264,9 +264,6 @@ process.stdout.write(row ? row.email : "");
     # ------------------------------------------------------------ Build ---
 
     Write-Step "App bauen"
-    Write-Host "DEBUG-ENV-DUMP-START"
-    Get-ChildItem Env: | ForEach-Object { Write-Host "$($_.Name)=$($_.Value)" } | Sort-Object
-    Write-Host "DEBUG-ENV-DUMP-END"
 
     $existingProc = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($existingProc) {

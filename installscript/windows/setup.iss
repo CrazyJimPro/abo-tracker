@@ -16,7 +16,7 @@
 ; immer auf dem neuesten main-Stand.
 
 #define MyAppName "Abo-Tracker"
-#define MyAppVersion "1.6.3"
+#define MyAppVersion "1.6.4"
 #define MyAppPublisher "Abo-Tracker"
 #define MyAppURL "https://github.com/CrazyJimPro/abo-tracker"
 
@@ -78,6 +78,17 @@ Filename: "powershell.exe"; \
 Filename: "powershell.exe"; \
     Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installscript\windows\uninstall.ps1"""; \
     Flags: runascurrentuser waituntilterminated 64bit
+
+; Ohne das kennt Inno Setup nur die 6 .ps1-Dateien aus [Files] — git clone und
+; npm install legen tausende weitere Dateien in {app} an (node_modules,
+; node-runtime, data\, .git, ...), die Inno nie selbst registriert hat. Der
+; eingebaute Uninstaller versucht zwar am Ende, {app} zu entfernen, scheitert
+; dabei aber lautlos mit "Failed to delete directory (145)" (Verzeichnis nicht
+; leer) und meldet trotzdem "Uninstallation process succeeded" — der
+; Projektordner samt Datenbank bliebe sonst komplett erhalten. "filesandordirs"
+; entfernt {app} rekursiv, egal was darin liegt.
+[UninstallDelete]
+Type: filesandordirs; Name: "{app}"
 
 [Code]
 var

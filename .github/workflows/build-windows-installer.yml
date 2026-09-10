@@ -38,11 +38,24 @@ jobs:
           # Ohne das trug jede gebaute .exe die in setup.iss von Hand
           # gepflegte Nummer, unabhängig davon, welches Release gerade
           # gebaut wurde.
+          $pkgVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
           $version = "${{ github.ref_name }}" -replace '^v', ''
+
           if ($version -notmatch '^\d+(\.\d+)*$') {
-            $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+            # Kein Versions-Tag (workflow_dispatch) — dann gilt package.json.
+            $version = $pkgVersion
+          } elseif ($version -ne $pkgVersion) {
+            # Es gibt zwei Versionsnummern, und sie müssen übereinstimmen: der
+            # Tag bestimmt, was der Installer in "Apps & Features" einträgt,
+            # package.json bestimmt, was die App selbst anzeigt (lib/version.ts
+            # liest CURRENT_VERSION von dort). Liefen sie auseinander, meldete
+            # sich eine frisch installierte neueste Version mit der alten
+            # Nummer — und UpdateBadge verglich sie mit dem neuesten Release
+            # und zeigte dauerhaft ein "Update verfügbar" an, das sich nie
+            # erledigen ließ. Genau so passiert zwischen v1.6.6 und v1.6.7.
+            throw "Tag v$version und package.json ($pkgVersion) stimmen nicht ueberein. Vor dem Taggen die Version in package.json setzen (und die Vorgabe in installscript/windows/setup.iss gleich mit)."
           }
-          Write-Host "Installer-Version: $version"
+          Write-Host "Installer-Version: $version (package.json: $pkgVersion)"
 
           & $iscc "/DMyAppVersion=$version" "installscript\windows\setup.iss"
           if ($LASTEXITCODE -ne 0) { throw "ISCC fehlgeschlagen." }

@@ -33,7 +33,18 @@ jobs:
             choco install innosetup -y --no-progress
             $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           }
-          & $iscc "installscript\windows\setup.iss"
+
+          # Die Version kommt aus dem gepushten Tag, sonst aus package.json.
+          # Ohne das trug jede gebaute .exe die in setup.iss von Hand
+          # gepflegte Nummer, unabhängig davon, welches Release gerade
+          # gebaut wurde.
+          $version = "${{ github.ref_name }}" -replace '^v', ''
+          if ($version -notmatch '^\d+(\.\d+)*$') {
+            $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          }
+          Write-Host "Installer-Version: $version"
+
+          & $iscc "/DMyAppVersion=$version" "installscript\windows\setup.iss"
           if ($LASTEXITCODE -ne 0) { throw "ISCC fehlgeschlagen." }
 
       - uses: actions/upload-artifact@v4

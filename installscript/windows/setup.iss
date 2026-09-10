@@ -16,7 +16,13 @@
 ; immer auf dem neuesten main-Stand.
 
 #define MyAppName "Abo-Tracker"
-#define MyAppVersion "1.6.5"
+; Von aussen überschreibbar: der Release-Workflow gibt die Version des
+; gepushten v*-Tags mit "iscc /DMyAppVersion=1.7.0 ..." herein. Ohne das trug
+; jede gebaute .exe die hier zuletzt von Hand gepflegte Nummer — ein Release
+; v1.7.0 hätte sich in "Apps & Features" weiter als 1.6.5 eingetragen.
+#ifndef MyAppVersion
+  #define MyAppVersion "1.6.6"
+#endif
 #define MyAppPublisher "Abo-Tracker"
 #define MyAppURL "https://github.com/CrazyJimPro/abo-tracker"
 
@@ -46,18 +52,26 @@ OutputBaseFilename=AboTrackerSetup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-UninstallDisplayIcon={app}\installscript\windows\uninstall.ps1
+; Zeigte vorher auf uninstall.ps1 — eine .ps1 hat keine Icon-Ressource, in
+; "Apps & Features" erschien deshalb ein Platzhalter. Der Deinstaller selbst
+; existiert immer und bringt ein richtiges Icon mit.
+UninstallDisplayIcon={uninstallexe}
 
 [Files]
 Source: "find-node.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
+Source: "find-server.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
 Source: "bootstrap.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
 Source: "install.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
 Source: "start-prod.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
 Source: "stop-prod.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
+Source: "open-app.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
 Source: "uninstall.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
 
+; "Öffnen" geht über open-app.ps1 statt direkt auf die URL: lief der Server
+; gerade nicht, landete man vorher auf einer Browser-Fehlerseite ohne jeden
+; Hinweis. open-app.ps1 startet ihn bei Bedarf und öffnet erst dann.
 [Icons]
-Name: "{group}\Abo-Tracker öffnen"; Filename: "http://localhost:3200"
+Name: "{group}\Abo-Tracker öffnen"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installscript\windows\open-app.ps1"""
 Name: "{group}\Abo-Tracker starten"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installscript\windows\start-prod.ps1"""
 Name: "{group}\Abo-Tracker stoppen"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installscript\windows\stop-prod.ps1"""
 Name: "{group}\Deinstallieren"; Filename: "{uninstallexe}"
@@ -74,12 +88,13 @@ Filename: "powershell.exe"; \
     StatusMsg: "Abo-Tracker wird eingerichtet (Node.js, Abhängigkeiten, Datenbank) — das kann einige Minuten dauern …"; \
     Flags: runascurrentuser waituntilterminated 64bit
 
-[UninstallRun]
-Filename: "powershell.exe"; \
-    Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installscript\windows\uninstall.ps1"""; \
-    Flags: runascurrentuser waituntilterminated 64bit
+; Kein [UninstallRun]-Eintrag für uninstall.ps1: Inno wertet den Exit-Code
+; eines [UninstallRun]-Programms nicht aus, eine fehlgeschlagene Datensicherung
+; würde also stillschweigend übergangen und der Ordner trotzdem gelöscht.
+; Der Aufruf passiert deshalb weiter unten in [Code] per Exec(), wo sich der
+; Rückgabewert prüfen und die Deinstallation notfalls abbrechen lässt.
 
-; Ohne das kennt Inno Setup nur die 6 .ps1-Dateien aus [Files] — git clone und
+; Ohne das kennt Inno Setup nur die 8 .ps1-Dateien aus [Files] — git clone und
 ; npm install legen tausende weitere Dateien in {app} an (node_modules,
 ; node-runtime, data\, .git, ...), die Inno nie selbst registriert hat. Der
 ; eingebaute Uninstaller versucht zwar am Ende, {app} zu entfernen, scheitert
@@ -106,6 +121,19 @@ end;
 function GetAdminEmail(Param: string): string;
 begin
   Result := AdminEmailPage.Values[0];
+end;
+
+// Liegt im Zielordner schon eine Datenbank, existiert der Admin-Account
+// längst und die E-Mail wird nirgends verwendet — dann ist die Seite beim
+// Aktualisieren nur eine Pflichteingabe ohne Wirkung.
+function IsExistingInstallation: Boolean;
+begin
+  Result := FileExists(ExpandConstant('{app}\data\abo-tracker.db'));
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := (PageID = AdminEmailPage.ID) and IsExistingInstallation;
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -174,6 +202,56 @@ begin
           mbInformation, MB_OK);
       end;
       DeleteFile(CredFile);
+    end;
+  end;
+end;
+
+// [UninstallDelete] weiter oben löscht {app} rekursiv — inklusive data\ mit
+// der Datenbank. Das passierte vorher kommentarlos: uninstall.ps1 kennt zwar
+// einen -KeepData-Schalter, der reguläre Deinstallationsweg hat ihn aber nie
+// gesetzt, und das README verlangte dafür einen manuellen Vorab-Aufruf, den
+// im Ernstfall niemand macht. Jetzt wird gefragt, bevor irgendetwas passiert.
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  ResultCode: Integer;
+  KeepDataFlag: string;
+  ScriptPath: string;
+begin
+  if CurUninstallStep = usUninstall then
+  begin
+    ScriptPath := ExpandConstant('{app}\installscript\windows\uninstall.ps1');
+    if not FileExists(ScriptPath) then
+      Exit;
+
+    KeepDataFlag := '';
+    if FileExists(ExpandConstant('{app}\data\abo-tracker.db')) then
+    begin
+      if MsgBox(
+        'Die Deinstallation entfernt den kompletten Ordner' + #13#10 +
+        ExpandConstant('{app}') + #13#10 + #13#10 +
+        'Darin liegt auch die Datenbank mit allen erfassten Abos — die ist ' +
+        'das einzige, was sich nicht wiederherstellen lässt.' + #13#10 + #13#10 +
+        'Soll vorher eine Kopie auf dem Desktop abgelegt werden?',
+        mbConfirmation, MB_YESNO) = IDYES then
+        KeepDataFlag := ' -KeepData';
+    end;
+
+    // {sysnative} statt {sys}: der Deinstaller ist wie Setup.exe ein
+    // 32-Bit-Prozess (siehe Kommentar bei ArchitecturesInstallIn64BitMode).
+    Exec(ExpandConstant('{sysnative}\WindowsPowerShell\v1.0\powershell.exe'),
+      '-NoProfile -ExecutionPolicy Bypass -File "' + ScriptPath + '"' + KeepDataFlag,
+      '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
+
+    // Nur wenn tatsächlich gesichert werden sollte, ist ein Fehlschlag hier
+    // ein Grund anzuhalten — sonst wäre die Datenbank gleich darauf weg.
+    if (KeepDataFlag <> '') and (ResultCode <> 0) then
+    begin
+      if MsgBox(
+        'Die Sicherung der Datenbank hat nicht geklappt.' + #13#10 + #13#10 +
+        'Wird jetzt fortgefahren, sind die Daten unwiderruflich weg.' + #13#10 +
+        'Trotzdem deinstallieren?',
+        mbError, MB_YESNO) = IDNO then
+        Abort();
     end;
   end;
 end;

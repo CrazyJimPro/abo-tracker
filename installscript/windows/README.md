@@ -80,9 +80,15 @@ kein `winget` vorhanden), bricht der Installer mit dem jeweiligen
 Laufender Betrieb:
 
 ```powershell
+installscript\windows\open-app.ps1      # startet den Server falls nötig und öffnet den Browser
 installscript\windows\start-prod.ps1    # Server von Hand starten
 installscript\windows\stop-prod.ps1     # Server stoppen
 ```
+
+`start-prod.ps1` tut nichts, wenn der Server bereits läuft, und
+`stop-prod.ps1` fasst einen **fremden** Prozess auf dem Port nicht an,
+sondern meldet ihn — auf Port 3200 kann schließlich auch etwas anderes
+lauschen.
 
 Log-Dateien: `prod-server.log` (Ausgabe) und `prod-server.err.log` (Fehler)
 im Projektordner.
@@ -119,20 +125,23 @@ Eintrag "Deinstallieren" in der Startmenü-Programmgruppe, oder direkt
 entfernt den Autostart-Task und löscht danach den kompletten Projektordner
 (App-Code, `node_modules`, Node-Runtime, Datenbank — alles).
 
+Findet der Deinstaller dabei eine Datenbank, **fragt er vorher nach**, ob eine
+Kopie auf dem Desktop abgelegt werden soll (`abo-tracker-backup-<Datum>`).
+Schlägt diese Sicherung fehl, hält er an und fragt, ob trotzdem gelöscht
+werden soll — die Datenbank ist das einzige an der ganzen Installation, was
+sich nicht wiederherstellen lässt.
+
 **Nicht** `installscript\windows\uninstall.ps1` direkt ausführen, um zu
 deinstallieren — das ist nur ein Hilfsskript, das der echte Deinstaller
 (`unins000.exe`) im Hintergrund aufruft, um Server und Autostart-Task zu
 stoppen. Es löscht den Ordner selbst nicht; direkt ausgeführt bleibt der
-komplette Projektordner (inklusive Datenbank) danach liegen.
-
-Um die Datenbank vorher zu sichern, **in dieser Reihenfolge**:
+komplette Projektordner (inklusive Datenbank) danach liegen. Für eine
+Sicherung *ohne* Deinstallation taugt es aber:
 
 ```powershell
 cd $env:LOCALAPPDATA\Abo-Tracker
-installscript\windows\uninstall.ps1 -KeepData    # sichert data\ nach ...-data-backup-<Datum>
+installscript\windows\uninstall.ps1 -KeepData    # sichert data\ auf den Desktop
 ```
-
-Danach den regulären Deinstaller wie oben starten.
 
 Visual Studio Build Tools und Python (falls vom Installer automatisch
 nachinstalliert, siehe [oben](#build-werkzeuge-visual-studio-build-tools--python))
@@ -153,4 +162,6 @@ winget uninstall --id Python.Python.3.12
 | Server startet nicht | `prod-server.err.log` im Projektordner zeigt den Grund. |
 | `install.log` fehlt oder zeigt nichts Hilfreiches | Liegt im Projektordner (`%LOCALAPPDATA%\Abo-Tracker\install.log`) — enthält die komplette Ausgabe von `bootstrap.ps1`/`install.ps1`, auch wenn das Konsolenfenster sich schon geschlossen hat. |
 | Autostart-Task fehlt nach einem Windows-Update | `installscript\windows\install.ps1` erneut ausführen — legt den Task neu an. Schlägt die Task-Registrierung fehl (z. B. Gruppenrichtlinie), bricht das die Installation nicht ab, nur der Autostart fehlt dann. |
-| Port 3200 belegt | `installscript\windows\start-prod.ps1 -Port 3300` (und beim nächsten `install.ps1`-Lauf ebenfalls `-Port 3300` mitgeben). |
+| Port 3200 belegt | `installscript\windows\start-prod.ps1 -Port 3300` (und beim nächsten `install.ps1`-Lauf ebenfalls `-Port 3300` mitgeben). Lauscht dort fremde Software, bricht der Installer ab, statt sie zu beenden. |
+| Windows-Firewall fragt beim ersten Start nach | Next.js lauscht wie unter Linux auf allen Schnittstellen, damit die App auch von anderen Geräten im Heimnetz erreichbar ist. Wer das nicht braucht: `start-prod.ps1 -BindHost 127.0.0.1` — dann bleibt die App rein lokal und die Abfrage entfällt. |
+| Passwort vergessen, `install.log` durchsucht | Steht dort nicht drin — das temporäre Passwort wird bewusst am Transcript vorbei ausgegeben, damit es nicht dauerhaft im Klartext neben der Datenbank liegt. Zurücksetzen geht im Bereich `/admin` oder über eine zweite Admin-Person. |

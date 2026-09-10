@@ -24,11 +24,24 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# PowerShell 5.1 handelt von sich aus noch TLS 1.0/1.1 aus; nodejs.org und
+# GitHub lehnen das inzwischen ab, der Node-Download schlüge sonst auf einem
+# frisch aufgesetzten Windows mit einem nichtssagenden Verbindungsfehler fehl.
+try {
+    [Net.ServicePointManager]::SecurityProtocol =
+        [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+} catch { }
+
+# Der Fortschrittsbalken von Invoke-WebRequest kostet unter PowerShell 5.1 bei
+# einem ~30-MB-Download ein Vielfaches der eigentlichen Übertragungszeit.
+$ProgressPreference = "SilentlyContinue"
+
 $WindowsDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $InstallScriptDir = Split-Path -Parent $WindowsDir
 $ProjectDir = Split-Path -Parent $InstallScriptDir
 
 . (Join-Path $WindowsDir "find-node.ps1")
+. (Join-Path $WindowsDir "find-server.ps1")
 
 if (-not (Test-Path (Join-Path $ProjectDir "package.json"))) {
     throw "Kein Projekt gefunden in $ProjectDir — liegt install.ps1 noch im Ordner installscript\windows\?"
@@ -66,7 +79,11 @@ if (-not $Node) {
     # Statt eine feste Version zu hardcoden, wird die neueste passende LTS-
     # Version aus dem offiziellen Index gewählt — das ist robuster als ein
     # Versionsstand, der irgendwann nicht mehr existiert oder veraltet ist.
-    $index = Invoke-RestMethod -Uri "https://nodejs.org/dist/index.json"
+    # -UseBasicParsing überall: ohne das benutzt Invoke-WebRequest unter
+    # PowerShell 5.1 die Internet-Explorer-Engine zum Parsen der Antwort und
+    # scheitert auf einem frischen Windows, auf dem die IE-Erstkonfiguration
+    # nie durchlaufen wurde.
+    $index = Invoke-RestMethod -Uri "https://nodejs.org/dist/index.json" -UseBasicParsing
     $min = [version]$MinNode
     $candidate = $index | Where-Object {
         $_.lts -ne $false -and ([version]($_.version.TrimStart('v'))) -ge $min
@@ -81,8 +98,28 @@ if (-not $Node) {
     $zipPath = Join-Path $env:TEMP "node-$nodeVersion-win-x64.zip"
     $extractDir = Join-Path $env:TEMP "node-extract-$nodeVersion"
 
+    $zipName = "node-$nodeVersion-win-x64.zip"
+
     Write-Note "Lade Node $nodeVersion …"
-    Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
+    Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing
+
+    # Gegen die offizielle SHASUMS256.txt prüfen. Ein abgebrochener Download
+    # fällt sonst erst beim Entpacken auf — und ein unterwegs veränderter
+    # überhaupt nicht, obwohl von hier aus gleich nativer Code kompiliert und
+    # ausgeführt wird.
+    $shaText = (Invoke-WebRequest -Uri "https://nodejs.org/dist/$nodeVersion/SHASUMS256.txt" -UseBasicParsing).Content
+    $shaLine = $shaText -split "`n" | Where-Object { $_ -match "\s\*?$([regex]::Escape($zipName))\s*$" } | Select-Object -First 1
+    if (-not $shaLine) {
+        Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
+        throw "Keine Prüfsumme für $zipName in SHASUMS256.txt gefunden."
+    }
+    $expectedHash = ($shaLine -split '\s+')[0]
+    $actualHash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash
+    if ($actualHash -ne $expectedHash) {
+        Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
+        throw "Prüfsumme des Node-Downloads stimmt nicht (erwartet $expectedHash, war $actualHash)."
+    }
+    Write-Ok "Download per SHA256 geprüft"
 
     if (Test-Path $extractDir) { Remove-Item $extractDir -Recurse -Force }
     Expand-Archive -Path $zipPath -DestinationPath $extractDir
@@ -278,7 +315,15 @@ try {
 
     $dbPathRaw = (Get-Content $envLocal | Where-Object { $_ -match '^\s*DATABASE_PATH\s*=' } | Select-Object -Last 1)
     $dbPath = if ($dbPathRaw) { ($dbPathRaw -split '=', 2)[1].Trim() } else { "data/abo-tracker.db" }
+    # Anführungszeichen und einen angehängten Kommentar wegnehmen — das
+    # Linux-Pendant sourced .env.local und bekommt beides von der Shell
+    # geschenkt, hier muss es von Hand passieren. Ein Kommentar zählt nur,
+    # wenn ihm Leerraum vorausgeht, sonst wäre ein "#" im Pfad nicht möglich.
+    if ($dbPath -notmatch '^\s*["'']') { $dbPath = ($dbPath -replace '\s+#.*$', '').Trim() }
+    $dbPath = ($dbPath -replace '^\s*(["''])(.*)\1\s*$', '$2')
+    if (-not $dbPath) { $dbPath = "data/abo-tracker.db" }
     if (-not [System.IO.Path]::IsPathRooted($dbPath)) { $dbPath = Join-Path $ProjectDir $dbPath }
+    Write-Note "Datenbank: $dbPath"
 
     # better-sqlite3 legt die Datenbankdatei selbst an, aber nicht deren
     # Elternordner — /data existiert in einem frischen Checkout nicht
@@ -342,11 +387,21 @@ process.stdout.write(row ? row.email : "");
 
     Write-Step "App bauen"
 
-    $existingProc = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+    # Vor dem Build stoppen, nicht erst danach: next build schreibt .next/ neu,
+    # unter einem laufenden Server weg. Aber nur einen Server aus genau diesem
+    # Projektordner — vorher traf das "Stop-Process -Force" alles, was
+    # zufällig auf dem Port lauschte (das Linux-Pendant in ../install.sh
+    # bricht in dem Fall ausdrücklich ab, statt fremde Software abzuschießen).
+    $existingProc = Get-PortOwner -Port $Port
     if ($existingProc) {
-        Write-Note "Laufender Abo-Tracker-Server (PID $($existingProc.OwningProcess)) wird für den Build beendet …"
-        Stop-Process -Id $existingProc.OwningProcess -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 1
+        if (-not (Test-IsOurServer -Process $existingProc -ProjectDir $ProjectDir -PidFile $PidFile)) {
+            throw "Port $Port ist von einem fremden Prozess belegt (PID $($existingProc.Id), $($existingProc.ProcessName)). Mit -Port <nummer> einen anderen Port wählen."
+        }
+        Write-Note "Laufender Abo-Tracker-Server (PID $($existingProc.Id)) wird für den Build beendet …"
+        Stop-Process -Id $existingProc.Id -Force -ErrorAction SilentlyContinue
+        if (-not (Wait-PortFree -Port $Port -TimeoutSeconds 10)) {
+            throw "Der laufende Server auf Port $Port ließ sich nicht beenden."
+        }
     }
 
     # --webpack statt des seit Next.js 16 für "next build" defaultmäßigen
@@ -369,19 +424,46 @@ process.stdout.write(row ? row.email : "");
 
         & (Join-Path $WindowsDir "start-prod.ps1") -Port $Port
 
+        # Test-PortOpen statt Test-NetConnection (siehe find-server.ps1):
+        # Test-NetConnection braucht auf einem geschlossenen Port über drei
+        # Sekunden pro Versuch, aus den gedachten 30 Sekunden Wartezeit
+        # wurden damit rund vier Minuten, bevor der Fehler überhaupt
+        # auftauchte.
         $ready = $false
-        for ($i = 0; $i -lt 60; $i++) {
-            if (Test-NetConnection -ComputerName "127.0.0.1" -Port $Port -InformationLevel Quiet -WarningAction SilentlyContinue) {
-                $ready = $true
-                break
+        $serverGone = $false
+        $deadline = (Get-Date).AddSeconds(60)
+        while ((Get-Date) -lt $deadline) {
+            if (Test-PortOpen -Port $Port) { $ready = $true; break }
+            # Ist der eben gestartete Node schon wieder weg, ist der Start
+            # gescheitert — dann nicht noch eine Minute ins Leere warten.
+            $startedId = 0
+            $recordedPid = Get-Content $PidFile -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ([int]::TryParse(("$recordedPid").Trim(), [ref]$startedId)) {
+                if (-not (Get-Process -Id $startedId -ErrorAction SilentlyContinue)) {
+                    $serverGone = $true
+                    break
+                }
             }
-            Start-Sleep -Milliseconds 500
+            Start-Sleep -Milliseconds 250
         }
 
         if ($ready) {
             Write-Ok "Server läuft auf http://localhost:$Port"
         } else {
-            throw "Server ist nicht hochgekommen. Details stehen in prod-server.log / prod-server.err.log"
+            # Der Grund steht praktisch immer im Fehlerlog — ohne diesen
+            # Auszug müsste man ihn in einem Konsolenfenster suchen, das sich
+            # gleich darauf schließt.
+            $errLog = Join-Path $ProjectDir "prod-server.err.log"
+            if (Test-Path $errLog) {
+                $tail = Get-Content $errLog -Tail 15 -ErrorAction SilentlyContinue
+                if ($tail) {
+                    Write-Note ""
+                    Write-Note "Letzte Zeilen aus prod-server.err.log:"
+                    $tail | ForEach-Object { Write-Note "  $_" }
+                }
+            }
+            $why = if ($serverGone) { "Der Server-Prozess hat sich sofort wieder beendet." } else { "Der Server hat den Port nicht rechtzeitig geöffnet." }
+            throw "Server ist nicht hochgekommen. $why Details stehen in prod-server.log / prod-server.err.log"
         }
     }
 
@@ -400,7 +482,13 @@ process.stdout.write(row ? row.email : "");
             $action = New-ScheduledTaskAction -Execute "powershell.exe" `
                 -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$WindowsDir\start-prod.ps1`" -Port $Port"
             $trigger = New-ScheduledTaskTrigger -AtLogOn
-            $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
+            # -ExecutionTimeLimit 0 ist hier nicht optional: ohne die Angabe
+            # setzt New-ScheduledTaskSettingsSet PT72H, und weil start-prod.ps1
+            # den Node-Prozess als Kind startet, gilt die Aufgabe für die
+            # Aufgabenplanung solange als "läuft" — nach drei Tagen Laufzeit
+            # würde sie den Server also von sich aus beenden.
+            $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+                -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero)
 
             Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
             Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -ErrorAction Stop | Out-Null
@@ -422,7 +510,15 @@ process.stdout.write(row ? row.email : "");
     if (-not $NoStart) { Write-Host "  App:      http://localhost:$Port" -ForegroundColor White }
     if ($adminPassword) {
         Write-Host "  Login:    $Email"
-        Write-Host "  Passwort: $adminPassword" -ForegroundColor White
+        # [Console]::WriteLine statt Write-Host, und das ist der ganze Punkt:
+        # bootstrap.ps1 protokolliert den Lauf per Start-Transcript nach
+        # install.log, und Write-Host wird seit PowerShell 5.0 mitprotokolliert
+        # — das frische Passwort lag damit dauerhaft im Klartext neben der
+        # Datenbank, genau das, was setup.iss mit dem sofortigen Löschen von
+        # .admin-credentials.txt verhindern soll. [Console]::WriteLine schreibt
+        # am PowerShell-Host vorbei direkt auf die Konsole und taucht im
+        # Transcript nicht auf (nachgeprüft unter PowerShell 5.1).
+        [Console]::WriteLine("  Passwort: $adminPassword")
         Write-Host "            Wird beim ersten Login abgefragt und muss dann geändert werden."
         Write-Host "            Dieses Passwort wird nirgends noch einmal angezeigt."
 

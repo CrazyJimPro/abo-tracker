@@ -1,6 +1,6 @@
 {
   "name": "abo-tracker",
-  "version": "1.6.5",
+  "version": "1.6.6",
   "private": true,
   "scripts": {
     "dev": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first next dev",

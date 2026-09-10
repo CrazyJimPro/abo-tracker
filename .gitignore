@@ -26,6 +26,12 @@ prod-server.log
 # password from install.ps1 to setup.iss's post-install dialog
 .admin-credentials.txt
 
+# Windows installer: short-lived helper scripts install.ps1 writes into the
+# project root (require() resolves relative to the script's own folder, so
+# they cannot live in %TEMP%). Removed right after use - unless the install
+# is interrupted in between.
+.abo-tracker-*.js
+
 # local database — real data and password hashes, never commit
 /data
 
@@ -52,3 +58,6 @@ next-env.d.ts
 
 # claude code (personal, machine-local permission grants)
 .claude/settings.local.json
+
+# Windows installer build output (iscc setup.iss)
+/installscript/windows/dist

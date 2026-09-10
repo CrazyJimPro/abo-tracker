@@ -17,8 +17,21 @@ function findProjectRoot(): string {
   return process.cwd();
 }
 
+/*
+ * Bewusst kein output: "standalone". Das erzeugte bei jedem Build zusätzlich
+ * ein eigenständiges Paket unter .next/standalone/ (eigener server.js, auf 16
+ * statt 488 Pakete eingedampfte node_modules) — gestartet wird der Server aber
+ * über "next start", und das liest den normalen Build aus .next/ und fasst das
+ * Standalone-Paket nie an. Next.js wies beim Start entsprechend darauf hin.
+ *
+ * Der Weg andersherum wäre nicht, einfach auf "node .next/standalone/server.js"
+ * umzustellen: Next.js kopiert .next/static und public/ bewusst NICHT in das
+ * Standalone-Verzeichnis, der Server käme also ohne CSS, JS-Chunks und Assets
+ * hoch. Standalone lohnt sich, wenn man den Build woanders erzeugt und nur das
+ * Ergebnis ausliefert (Docker) — hier holt der Installer das ganze Repo,
+ * installiert die vollen node_modules und baut an Ort und Stelle.
+ */
 const nextConfig: NextConfig = {
-  output: "standalone",
   // better-sqlite3 ist ein natives Addon (kompilierte .node-Datei) — ohne
   // diese Ausnahme versucht Turbopack, es wie normalen JS-Code zu bündeln
   // und ihm beim Server-Build einen internen Hash-Namen zu geben. Das

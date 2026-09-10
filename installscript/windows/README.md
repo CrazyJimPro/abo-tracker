@@ -113,11 +113,37 @@ installscript\windows\start-prod.ps1
 
 ## Deinstallation
 
-Über **Einstellungen → Apps → Abo-Tracker → Deinstallieren** (oder das
-Icon in der Programmgruppe). Das stoppt den Server, entfernt den
-Autostart-Task und löscht danach den Projektordner. Um die Datenbank vorher
-zu sichern, `installscript\windows\uninstall.ps1 -KeepData` manuell
-ausführen, bevor der reguläre Deinstaller läuft.
+Über **Einstellungen → Apps → Abo-Tracker → Deinstallieren**, oder den
+Eintrag "Deinstallieren" in der Startmenü-Programmgruppe, oder direkt
+`%LOCALAPPDATA%\Abo-Tracker\unins000.exe` ausführen. Das stoppt den Server,
+entfernt den Autostart-Task und löscht danach den kompletten Projektordner
+(App-Code, `node_modules`, Node-Runtime, Datenbank — alles).
+
+**Nicht** `installscript\windows\uninstall.ps1` direkt ausführen, um zu
+deinstallieren — das ist nur ein Hilfsskript, das der echte Deinstaller
+(`unins000.exe`) im Hintergrund aufruft, um Server und Autostart-Task zu
+stoppen. Es löscht den Ordner selbst nicht; direkt ausgeführt bleibt der
+komplette Projektordner (inklusive Datenbank) danach liegen.
+
+Um die Datenbank vorher zu sichern, **in dieser Reihenfolge**:
+
+```powershell
+cd $env:LOCALAPPDATA\Abo-Tracker
+installscript\windows\uninstall.ps1 -KeepData    # sichert data\ nach ...-data-backup-<Datum>
+```
+
+Danach den regulären Deinstaller wie oben starten.
+
+Visual Studio Build Tools und Python (falls vom Installer automatisch
+nachinstalliert, siehe [oben](#build-werkzeuge-visual-studio-build-tools--python))
+werden von der Deinstallation **nicht** angerührt — das sind eigenständige
+System-Werkzeuge, kein Teil der App, und andere Software könnte sie
+ebenfalls nutzen. Wer sie manuell entfernen will:
+
+```powershell
+winget uninstall --id Microsoft.VisualStudio.2022.BuildTools
+winget uninstall --id Python.Python.3.12
+```
 
 ## Wenn etwas klemmt
 

@@ -1,10 +1,14 @@
 import "server-only";
 
-import { version as packageVersion } from "@/package.json";
+// Default import rather than `import { version } from ...`: webpack warns on
+// every build that named exports from JSON modules are going away ("only
+// default export is available soon"), which would turn this into a build
+// failure on a future Next.js/webpack upgrade.
+import packageJson from "@/package.json";
 
 const REPO = "CrazyJimPro/abo-tracker";
 
-export const CURRENT_VERSION = packageVersion;
+export const CURRENT_VERSION = packageJson.version;
 
 export async function getLatestVersion(): Promise<string | null> {
   try {

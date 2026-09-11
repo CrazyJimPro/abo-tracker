@@ -64,6 +64,27 @@ function Write-Note {
     Write-Host "    $Text"
 }
 
+# Beendet einen laufenden Abo-Tracker-Server aus genau diesem Projektordner.
+# Ein fremder Prozess auf dem Port wird nicht angefasst, sondern gemeldet
+# (siehe Test-IsOurServer in find-server.ps1). Läuft nichts, passiert nichts.
+function Stop-OurServer {
+    param([string]$Reason)
+
+    $proc = Get-PortOwner -Port $Port
+    if (-not $proc) { return }
+    if (-not (Test-IsOurServer -Process $proc -ProjectDir $ProjectDir -PidFile $PidFile)) {
+        throw "Port $Port ist von einem fremden Prozess belegt (PID $($proc.Id), $($proc.ProcessName)). Mit -Port <nummer> einen anderen Port wählen."
+    }
+    Write-Note "Laufender Abo-Tracker-Server (PID $($proc.Id)) wird $Reason beendet …"
+    Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+    # Auf das Prozessende warten, nicht nur auf den freien Port: erst dann
+    # gibt Windows die geladenen nativen Module (.node-Dateien) wieder frei.
+    Wait-Process -Id $proc.Id -Timeout 10 -ErrorAction SilentlyContinue
+    if (-not (Wait-PortFree -Port $Port -TimeoutSeconds 10)) {
+        throw "Der laufende Server auf Port $Port ließ sich nicht beenden."
+    }
+}
+
 Write-Host ""
 Write-Host "Abo-Tracker — Installation (Windows)" -ForegroundColor White
 Write-Note $ProjectDir
@@ -246,21 +267,41 @@ Push-Location $ProjectDir
 try {
     Remove-Item Env:\NODE_ENV -ErrorAction SilentlyContinue
 
+    # Den Server stoppen, BEVOR npm node_modules anfasst — nicht erst vor dem
+    # Build. Ein laufender Server hat die nativen Module (better-sqlite3,
+    # next-swc) als DLLs geladen, und Windows verweigert das Löschen einer
+    # geladenen DLL. "npm ci" räumt node_modules aber zuerst komplett ab und
+    # scheiterte deshalb bei jeder Aktualisierung einer laufenden Installation
+    # mit "EPERM: operation not permitted, unlink ...next-swc.win32-x64-
+    # msvc.node". Aufgefangen hat das nur der Rückfall auf "npm install", der
+    # gesperrte Module wegbenennt statt löscht und dabei Reste wie
+    # node_modules\.better-sqlite3-XXXX zurückließ. Unter Linux fällt das nicht
+    # auf, dort lassen sich geöffnete Dateien löschen. Nebeneffekt: ein
+    # fremder Prozess auf dem Port fällt jetzt sofort auf, nicht erst nach
+    # mehreren Minuten npm install.
+    Stop-OurServer -Reason "für die Aktualisierung"
+
     # npm schreibt Warnungen nach stderr; unter $ErrorActionPreference =
     # "Stop" würde ein 2>&1-Redirect jede einzelne Zeile davon in einen
     # abbrechenden Fehler verwandeln (PowerShell-5.1-Eigenheit bei nativen
     # Programmen). Deshalb hier kurzzeitig auf "Continue" schalten.
+    #
+    # ForEach-Object { "$_" } macht aus den ErrorRecords, in die PowerShell
+    # jede stderr-Zeile verpackt, wieder schlichten Text. Ohne das erschien
+    # schon eine harmlose Deprecation-Warnung im Installationsfenster als
+    # roter Fehlerblock ("npm.cmd : npm warn deprecated ...", dazu
+    # "NativeCommandError" und Zeilenangabe).
     $prevEap = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
         if (Test-Path "package-lock.json") {
-            & $Npm ci --no-audit --no-fund 2>&1 | Tee-Object -Variable npmOutput
+            & $Npm ci --no-audit --no-fund 2>&1 | ForEach-Object { "$_" } | Tee-Object -Variable npmOutput
             if ($LASTEXITCODE -ne 0) {
                 Write-Note "npm ci fehlgeschlagen, versuche npm install …"
-                & $Npm install --no-audit --no-fund 2>&1 | Tee-Object -Variable npmOutput
+                & $Npm install --no-audit --no-fund 2>&1 | ForEach-Object { "$_" } | Tee-Object -Variable npmOutput
             }
         } else {
-            & $Npm install --no-audit --no-fund 2>&1 | Tee-Object -Variable npmOutput
+            & $Npm install --no-audit --no-fund 2>&1 | ForEach-Object { "$_" } | Tee-Object -Variable npmOutput
         }
     } finally {
         $ErrorActionPreference = $prevEap
@@ -330,6 +371,15 @@ try {
     # (steht in .gitignore, siehe ../install.sh Zeile mit "mkdir -p").
     New-Item -ItemType Directory -Path (Split-Path -Parent $dbPath) -Force | Out-Null
 
+    # Seed und Admin-Anlage sind TypeScript und laufen über Nodes
+    # Type-Stripping; ohne den Schalter warnt Node bei jedem Aufruf über das
+    # fehlende "type" in package.json (MODULE_TYPELESS_PACKAGE_JSON). Das ist
+    # hier korrekt so und nur Rauschen — das Linux-Pendant schaltet die Warnung
+    # genauso ab (NODE_TS_FLAGS in ../install.sh). Vor dem Build wird der alte
+    # Wert wiederhergestellt, damit der Server nicht damit startet.
+    $prevNodeOptions = $env:NODE_OPTIONS
+    $env:NODE_OPTIONS = ("$prevNodeOptions --disable-warning=MODULE_TYPELESS_PACKAGE_JSON").Trim()
+
     & $Npm run db:migrate
     if ($LASTEXITCODE -ne 0) { throw "Migration fehlgeschlagen." }
     Write-Ok "Migrationen angewendet"
@@ -387,22 +437,13 @@ process.stdout.write(row ? row.email : "");
 
     Write-Step "App bauen"
 
-    # Vor dem Build stoppen, nicht erst danach: next build schreibt .next/ neu,
-    # unter einem laufenden Server weg. Aber nur einen Server aus genau diesem
-    # Projektordner — vorher traf das "Stop-Process -Force" alles, was
-    # zufällig auf dem Port lauschte (das Linux-Pendant in ../install.sh
-    # bricht in dem Fall ausdrücklich ab, statt fremde Software abzuschießen).
-    $existingProc = Get-PortOwner -Port $Port
-    if ($existingProc) {
-        if (-not (Test-IsOurServer -Process $existingProc -ProjectDir $ProjectDir -PidFile $PidFile)) {
-            throw "Port $Port ist von einem fremden Prozess belegt (PID $($existingProc.Id), $($existingProc.ProcessName)). Mit -Port <nummer> einen anderen Port wählen."
-        }
-        Write-Note "Laufender Abo-Tracker-Server (PID $($existingProc.Id)) wird für den Build beendet …"
-        Stop-Process -Id $existingProc.Id -Force -ErrorAction SilentlyContinue
-        if (-not (Wait-PortFree -Port $Port -TimeoutSeconds 10)) {
-            throw "Der laufende Server auf Port $Port ließ sich nicht beenden."
-        }
-    }
+    if ($null -eq $prevNodeOptions) { Remove-Item Env:\NODE_OPTIONS -ErrorAction SilentlyContinue } else { $env:NODE_OPTIONS = $prevNodeOptions }
+
+    # Gestoppt wurde der Server schon vor npm (siehe dort). Hier nur noch als
+    # Absicherung, falls ihn zwischendurch jemand wieder gestartet hat, etwa
+    # per Startmenü-Verknüpfung: next build schreibt .next/ neu, unter einem
+    # laufenden Server weg.
+    Stop-OurServer -Reason "für den Build"
 
     # --webpack statt des seit Next.js 16 für "next build" defaultmäßigen
     # Turbopack: Turbopack brach den Build reproduzierbar mit "Cannot find
@@ -481,7 +522,17 @@ process.stdout.write(row ? row.email : "");
             $taskName = "AboTracker"
             $action = New-ScheduledTaskAction -Execute "powershell.exe" `
                 -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$WindowsDir\start-prod.ps1`" -Port $Port"
-            $trigger = New-ScheduledTaskTrigger -AtLogOn
+            # -User ist hier der eigentliche Fix: ein -AtLogOn-Trigger ohne
+            # Benutzer heißt "bei Anmeldung eines BELIEBIGEN Benutzers", und so
+            # eine Aufgabe darf nur ein Admin anlegen. Der Installer läuft aber
+            # bewusst ohne Admin-Rechte (PrivilegesRequired=lowest) —
+            # Register-ScheduledTask scheiterte deshalb bei jeder Installation
+            # mit "Zugriff verweigert", der Autostart wurde nie eingerichtet.
+            # Mit dem aktuellen Benutzer als Ziel ist es eine gewöhnliche
+            # Benutzeraufgabe, die jeder für sich selbst anlegen darf
+            # (nachgeprüft als Nicht-Admin: ohne -User abgelehnt, mit -User ok).
+            $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+            $trigger = New-ScheduledTaskTrigger -AtLogOn -User $currentUser
             # -ExecutionTimeLimit 0 ist hier nicht optional: ohne die Angabe
             # setzt New-ScheduledTaskSettingsSet PT72H, und weil start-prod.ps1
             # den Node-Prozess als Kind startet, gilt die Aufgabe für die

@@ -20,7 +20,13 @@
 # production
 /build
 prod-server.log
+prod-server.err.log
 .server.pid
+
+# Windows: bootstrap.ps1's install transcript, and the portable Node.js
+# runtime install.ps1 downloads when no suitable Node is on PATH
+/install.log
+/node-runtime
 
 # Windows installer: transient handoff of a freshly generated admin
 # password from install.ps1 to setup.iss's post-install dialog

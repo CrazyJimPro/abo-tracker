@@ -533,11 +533,15 @@ process.stdout.write(row ? row.email : "");
             # (nachgeprüft als Nicht-Admin: ohne -User abgelehnt, mit -User ok).
             $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent().Name
             $trigger = New-ScheduledTaskTrigger -AtLogOn -User $currentUser
-            # -ExecutionTimeLimit 0 ist hier nicht optional: ohne die Angabe
-            # setzt New-ScheduledTaskSettingsSet PT72H, und weil start-prod.ps1
-            # den Node-Prozess als Kind startet, gilt die Aufgabe für die
-            # Aufgabenplanung solange als "läuft" — nach drei Tagen Laufzeit
-            # würde sie den Server also von sich aus beenden.
+            # -ExecutionTimeLimit 0 ist Absicherung, kein akuter Fix: die
+            # Aufgabe endet, sobald start-prod.ps1 fertig ist — den per
+            # Start-Process abgekoppelten Node-Server verfolgt die
+            # Aufgabenplanung nicht (nachgeprüft: Kindprozess läuft weiter,
+            # Aufgabe steht auf "Bereit", LastTaskResult 0). Das Standardlimit
+            # PT72H trifft den Server heute also nicht. Greifen würde es erst,
+            # wenn start-prod.ps1 irgendwann auf den Server wartet, statt ihn
+            # abzukoppeln — dann soll ihn die Aufgabenplanung nicht nach drei
+            # Tagen beenden.
             $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
                 -StartWhenAvailable -ExecutionTimeLimit ([TimeSpan]::Zero)
 

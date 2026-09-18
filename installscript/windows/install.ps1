@@ -164,101 +164,89 @@ $env:Path = "$NodeDir;$env:Path"
 $nodeVersionOutput = & $Node -v
 Write-Ok "Node $nodeVersionOutput  ($Node)"
 
-# ------------------------------------------------------ Build-Werkzeuge ---
+# --------------------------------------------- Keine Build-Werkzeuge ---
 
-# better-sqlite3 hat keine vorkompilierten Windows-Binaries und kompiliert bei
-# jeder Installation nativen Code — dafür braucht node-gyp sowohl die Visual
-# Studio Build Tools als auch Python. Beide fehlen auf einem frischen Windows-
-# Rechner fast immer; statt erst mitten in "npm install" mit einer kryptischen
-# gyp-Fehlermeldung aufzugeben, wird hier vorab geprüft und bei Bedarf über
-# winget automatisch nachinstalliert, damit die Installation in einem
-# Durchgang durchläuft.
-
-function Test-VSBuildToolsAvailable {
-    $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
-    if (-not (Test-Path $vswhere)) { return $false }
-    $path = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
-    return [bool]$path
-}
-
-function Test-PythonAvailable {
-    # Get-Command "python"/"py" allein reicht nicht: ohne echtes Python
-    # installiert liegt unter WindowsApps ein "App Execution Alias"-Stub mit
-    # genau diesem Namen, der beim Ausführen nur den Microsoft Store öffnet.
-    # Get-Command findet den Namen trotzdem klaglos — deshalb Treffer aus
-    # WindowsApps explizit ausschließen.
-    foreach ($cmd in @("py", "python", "python3")) {
-        $found = Get-Command $cmd -ErrorAction SilentlyContinue
-        if ($found -and $found.Source -notmatch '\\WindowsApps\\') { return $true }
-    }
-    # winget aktualisiert das System-PATH, aber dieser bereits laufende
-    # Prozess sieht davon nichts — deshalb zusätzlich direkt in den üblichen
-    # Installationsordnern nachsehen (dieselben, die node-gyp selbst absucht).
-    $candidates = Get-ChildItem "$env:LOCALAPPDATA\Programs\Python" -Directory -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -match '^Python3\d\d$' }
-    foreach ($c in $candidates) {
-        if (Test-Path (Join-Path $c.FullName "python.exe")) { return $true }
-    }
-    return $false
-}
-
-Write-Step "Build-Werkzeuge prüfen"
-
-if (Test-VSBuildToolsAvailable) {
-    Write-Ok "Visual Studio Build Tools vorhanden"
-} else {
-    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-        throw "Visual Studio Build Tools fehlen und winget ist nicht verfügbar. Bitte manuell installieren: https://visualstudio.microsoft.com/visual-cpp-build-tools/"
-    }
-    Write-Note "Visual Studio Build Tools fehlen — werden jetzt automatisch installiert."
-    Write-Note "Das braucht eine Admin-Bestätigung (UAC) und kann einige Minuten dauern …"
-    & winget install --id Microsoft.VisualStudio.2022.BuildTools --accept-package-agreements --accept-source-agreements `
-        --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
-    if ($LASTEXITCODE -ne 0 -or -not (Test-VSBuildToolsAvailable)) {
-        throw "Visual Studio Build Tools konnten nicht automatisch installiert werden. Bitte manuell: winget install --id Microsoft.VisualStudio.2022.BuildTools --override ""--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"""
-    }
-    Write-Ok "Visual Studio Build Tools installiert"
-}
-
-if (Test-PythonAvailable) {
-    Write-Ok "Python vorhanden"
-} else {
-    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-        throw "Python fehlt und winget ist nicht verfügbar. Bitte manuell installieren: https://www.python.org/downloads/"
-    }
-    Write-Note "Python fehlt (wird von node-gyp zum Kompilieren gebraucht) — wird jetzt automatisch installiert."
-    & winget install --id Python.Python.3.12 --accept-package-agreements --accept-source-agreements
-    if ($LASTEXITCODE -ne 0 -or -not (Test-PythonAvailable)) {
-        throw "Python konnte nicht automatisch installiert werden. Bitte manuell: winget install --id Python.Python.3.12"
-    }
-    # winget aktualisiert nur das System-PATH (Registry) — dieser bereits
-    # laufende Prozess bekommt das nicht automatisch mit, würde node-gyp
-    # also "python" trotz erfolgreicher Installation nicht finden lassen.
-    $newPython = Get-ChildItem "$env:LOCALAPPDATA\Programs\Python" -Directory -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -match '^Python3\d\d$' } |
-        Sort-Object Name -Descending | Select-Object -First 1
-    if ($newPython) { $env:Path = "$($newPython.FullName);$env:Path" }
-    Write-Ok "Python installiert"
-}
+# Hier stand früher ein Schritt, der die Visual Studio Build Tools (2-4 GB,
+# mit UAC-Nachfrage) und Python über winget nachinstallierte. Begründung war,
+# better-sqlite3 habe keine vorkompilierten Windows-Binaries und müsse bei
+# jeder Installation nativen Code kompilieren. Das ist nachweislich falsch:
+# better-sqlite3 13.x liefert Node-API-Prebuilds mit (prebuilds\win32-x64.node,
+# dazu win32-arm64, macOS und Linux). Node-API heißt ABI-stabil — ein neuer
+# Node-Hauptversionssprung entwertet sie nicht.
+#
+# Sein binding.gyp ist ausdrücklich dafür gebaut, bei vorhandenem Prebuild
+# nichts zu tun ("npm's implicit node-gyp rebuild should do nothing when the
+# package contains a prebuild for the host"). Gemessen am 2026-09-18: lässt
+# man das Install-Script trotzdem laufen, startet node-gyp MSBuild.exe — und
+# legt in build\Release keine einzige .node-Datei ab. Die Build-Werkzeuge
+# wurden also für einen Build gebraucht, der nichts produziert.
+#
+# Seit npm 12 blockiert npm die Install-Scripts von Abhängigkeiten ohnehin,
+# solange sie nicht im allowScripts-Feld der package.json stehen. Dort ist
+# better-sqlite3 bewusst auf false gesetzt: der Prebuild wird geladen,
+# node-gyp läuft nie, und diese Installation braucht weder Python noch einen
+# C++-Compiler.
+#
+# Fehlt für eine Plattform einmal ein Prebuild (etwa bei 32-Bit-Node), fällt
+# das im better-sqlite3-Ladetest weiter unten auf und wird dort erklärt.
 
 # ---------------------------------------------------------- Abhängigkeiten ---
 
 Write-Step "Abhängigkeiten installieren"
-Write-Note "better-sqlite3 wird dabei ggf. kompiliert, das kann etwas dauern."
+Write-Note "better-sqlite3 nutzt ein vorkompiliertes Binary, es wird nichts kompiliert."
 
-function Write-MissingBuildToolsHint {
+# Wird gerufen, wenn npm install scheitert oder better-sqlite3 sich nicht laden
+# lässt. Frühere Fassungen behaupteten hier pauschal "muss nativen Code
+# kompilieren, dafür fehlt Werkzeug" und schickten den Nutzer die Build Tools
+# installieren — die falsche Spur, seit npm 12 Install-Scripts blockiert und
+# better-sqlite3 Prebuilds mitliefert. Deshalb wird die Ursache jetzt zuerst
+# eingegrenzt, statt geraten.
+function Write-SqliteFailureHint {
     param([string]$Output = "")
 
-    Write-Note "better-sqlite3 muss nativen Code kompilieren, dafür fehlt Werkzeug dafür."
-    $showVs = -not $Output -or $Output -match "Could not find any Visual Studio installation"
-    $showPython = -not $Output -or $Output -match "Could not find any Python installation"
-    if ($showVs) {
-        Write-Note "Visual Studio Build Tools installieren (braucht Admin-Rechte, ca. 2-4 GB):"
-        Write-Note "  winget install --id Microsoft.VisualStudio.2022.BuildTools --override ""--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"""
+    # Die Frage, die alles entscheidet: gibt es für diese Plattform überhaupt
+    # ein Prebuild? lib/binding.js schreibt genau dafür 1 oder 0 nach stdout,
+    # wenn man es direkt aufruft — dieselbe Prüfung, die binding.gyp nutzt.
+    $bindingProbe = Join-Path $ProjectDir "node_modules\better-sqlite3\lib\binding.js"
+    $prebuild = ""
+    if (Test-Path $bindingProbe) {
+        $prevEap = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        try { $prebuild = (& $Node $bindingProbe 2>$null | Out-String).Trim() } catch { $prebuild = "" }
+        finally { $ErrorActionPreference = $prevEap }
     }
-    if ($showPython) {
-        Write-Note "Python installieren (wird von node-gyp zum Kompilieren gebraucht):"
-        Write-Note "  winget install --id Python.Python.3.12"
+
+    $arch = ""
+    try { $arch = (& $Node -p "process.platform + '-' + process.arch" 2>$null | Out-String).Trim() } catch { }
+    if ($arch) { Write-Note "Plattform dieser Node-Installation: $arch" }
+
+    if ($prebuild -eq "0") {
+        # Kein Prebuild: nur hier sind Build-Werkzeuge wirklich nötig, und nur
+        # hier muss zusätzlich das Install-Script freigegeben werden. Ohne die
+        # Freigabe bliebe node-gyp blockiert und der Compiler nutzlos.
+        Write-Note "Für diese Plattform liefert better-sqlite3 kein vorkompiliertes Binary mit."
+        Write-Note "Dann muss es kompiliert werden, und dafür braucht es beides:"
+        Write-Note "  1. Build-Werkzeuge:"
+        Write-Note "     winget install --id Microsoft.VisualStudio.2022.BuildTools --override ""--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"""
+        Write-Note "     winget install --id Python.Python.3.12"
+        Write-Note "  2. Freigabe des Install-Scripts (npm blockiert es sonst):"
+        Write-Note "     npm install-scripts approve better-sqlite3"
+        Write-Note "Ist 64-Bit-Node eine Option, ist der Wechsel darauf der einfachere Weg."
+    } elseif ($prebuild -eq "1") {
+        # Prebuild liegt vor, laden geht trotzdem nicht: dann ist die Datei
+        # beschädigt oder node_modules halb geschrieben — kein Werkzeug- und
+        # kein Freigabeproblem.
+        Write-Note "Ein passendes Prebuild ist vorhanden, lädt aber nicht — node_modules ist vermutlich beschädigt."
+        Write-Note "node_modules löschen und neu installieren:"
+        Write-Note "  Remove-Item -Recurse -Force node_modules; npm ci"
+    } else {
+        Write-Note "node_modules ist unvollständig — better-sqlite3 ist gar nicht installiert."
+        Write-Note "Neu installieren:  npm ci"
+    }
+
+    if ($Output -match "install scripts blocked|allowScripts") {
+        Write-Note "npm hat dabei Install-Scripts blockiert. Das ist normal und erwünscht:"
+        Write-Note "die Freigaben stehen im allowScripts-Feld der package.json."
     }
     Write-Note "Danach diesen Installer/install.ps1 erneut ausführen."
 }
@@ -307,8 +295,11 @@ try {
         $ErrorActionPreference = $prevEap
     }
     if ($LASTEXITCODE -ne 0) {
-        if ($npmOutput -match "node-gyp") {
-            Write-MissingBuildToolsHint -Output ($npmOutput -join "`n")
+        # Nur bei Hinweisen auf die nativen Abhängigkeiten erklären — bei einem
+        # Netzwerk- oder Registry-Fehler wäre der Prebuild-Hinweis irreführend.
+        if ($npmOutput -match "node-gyp|better-sqlite3|install scripts blocked") {
+            Write-Note "Der Fehler betrifft die nativen Abhängigkeiten:"
+            Write-SqliteFailureHint -Output ($npmOutput -join "`n")
         }
         throw "npm install fehlgeschlagen."
     }
@@ -333,7 +324,7 @@ try {
     }
     if ($LASTEXITCODE -ne 0) {
         Write-Note "better-sqlite3 lässt sich nicht laden."
-        Write-MissingBuildToolsHint
+        Write-SqliteFailureHint
         throw "Abhängigkeiten sind unvollständig."
     }
     Write-Ok "Pakete installiert"

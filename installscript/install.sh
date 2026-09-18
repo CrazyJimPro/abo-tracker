@@ -133,7 +133,7 @@ ok "Node $("$NODE" -v) · npm $(npm -v)  ($NODE)"
 # ---------------------------------------------------------- Abhängigkeiten ---
 
 step "Abhängigkeiten installieren"
-muted "better-sqlite3 wird dabei ggf. kompiliert, das kann etwas dauern."
+muted "better-sqlite3 nutzt ein vorkompiliertes Binary, es wird nichts kompiliert."
 
 # NODE_ENV=production würde npm die devDependencies überspringen lassen —
 # drizzle-kit und die Typen werden aber für Migration und Build gebraucht.
@@ -148,13 +148,40 @@ else
   npm install --no-audit --no-fund
 fi
 
-# better-sqlite3 ist nativ und wird beim Installieren kompiliert. Schlägt das
-# fehl (fehlender Compiler, oder npm hat die Install-Scripts blockiert), merkt
-# man das sonst erst beim ersten Seitenaufruf.
+# better-sqlite3 ist nativ. Seit npm 12 blockiert npm die Install-Scripts von
+# Abhängigkeiten, solange sie nicht im allowScripts-Feld der package.json
+# stehen — better-sqlite3 steht dort bewusst auf false, weil es Node-API-
+# Prebuilds mitliefert (prebuilds/linux-x64.node, dazu arm64 und musl) und sein
+# node-gyp-Lauf bei vorhandenem Prebuild ohnehin nichts produziert. Scheitert
+# dieser Ladetest, ist die Ursache also fast nie ein fehlender Compiler —
+# frühere Fassungen schickten den Nutzer genau dorthin.
 "$NODE" -e 'new (require("better-sqlite3"))(":memory:").close()' 2>/dev/null || {
   warn "better-sqlite3 lässt sich nicht laden."
-  info "Debian/Ubuntu: sudo apt install build-essential python3"
-  info "Bei neuerem npm ggf. zusätzlich: npm approve-scripts better-sqlite3"
+
+  # lib/binding.js schreibt direkt aufgerufen 1 oder 0 nach stdout — dieselbe
+  # Prüfung, mit der binding.gyp den Build überspringt.
+  PREBUILD=""
+  if [ -f node_modules/better-sqlite3/lib/binding.js ]; then
+    PREBUILD="$("$NODE" node_modules/better-sqlite3/lib/binding.js 2>/dev/null || true)"
+  fi
+  info "Plattform dieser Node-Installation: $("$NODE" -p "process.platform + '-' + process.arch" 2>/dev/null || echo unbekannt)"
+
+  case "$PREBUILD" in
+    0)
+      info "Für diese Plattform liefert better-sqlite3 kein vorkompiliertes Binary mit."
+      info "Dann muss es kompiliert werden, und dafür braucht es beides:"
+      info "  1. Build-Werkzeuge:  sudo apt install build-essential python3"
+      info "  2. Freigabe des Install-Scripts:  npm install-scripts approve better-sqlite3"
+      ;;
+    1)
+      info "Ein passendes Prebuild ist vorhanden, lädt aber nicht — node_modules ist vermutlich beschädigt."
+      info "Neu installieren:  rm -rf node_modules && npm ci"
+      ;;
+    *)
+      info "node_modules ist unvollständig — better-sqlite3 ist gar nicht installiert."
+      info "Neu installieren:  npm ci"
+      ;;
+  esac
   die "Abhängigkeiten sind unvollständig."
 }
 ok "Pakete installiert"

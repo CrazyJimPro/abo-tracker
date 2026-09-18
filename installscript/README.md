@@ -254,7 +254,7 @@ von einer Deinstallation siehe [Backup](#backup) oben.
 | Symptom | Ursache und Abhilfe |
 | --- | --- |
 | `Kein Node >= 22.18 gefunden` | Verneinte nvm-Installation. Node von <https://nodejs.org> installieren und erneut starten. |
-| `better-sqlite3 lässt sich nicht laden` | Es fehlen Build-Werkzeuge: `sudo apt install build-essential python3`. |
+| `better-sqlite3 lässt sich nicht laden` | Das Script grenzt die Ursache selbst ein. `better-sqlite3` bringt Node-API-Prebuilds mit (`prebuilds/linux-x64.node`, dazu arm64 und musl), Build-Werkzeuge sind also normalerweise nicht nötig. Fehlt für die Plattform eines, nennt das Script beides: `sudo apt install build-essential python3` **und** `npm install-scripts approve better-sqlite3` — seit npm 12 blockiert npm Install-Scripts, solange sie nicht im `allowScripts`-Feld der `package.json` stehen. |
 | `Port 3200 ist von einem fremden Prozess belegt` | Anderer Dienst auf dem Port. Mit `--port 3300` ausweichen. |
 | `Datenbank nicht gefunden` | Der Server wurde aus dem falschen Verzeichnis gestartet. `scripts/start-prod.sh` benutzen. |
 | `kill $(cat .server.pid)` sagt `No such process` | Der Server läuft schon nicht mehr, `.server.pid` war nur veraltet — kein Fehler. `scripts/stop-prod.sh` benutzen, das prüft den tatsächlichen Zustand statt der Datei blind zu vertrauen. |

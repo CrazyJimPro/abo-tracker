@@ -34,40 +34,56 @@ braucht also eine Internetverbindung.
 | --- | --- |
 | 1 | App-Code von GitHub holen (`bootstrap.ps1`) nach `%LOCALAPPDATA%\Abo-Tracker` |
 | 2 | Node.js suchen (>= 22.18), sonst portabel nach `node-runtime\` laden — kein Systemeingriff |
-| 3 | Build-Werkzeuge prüfen: Visual Studio Build Tools + Python (siehe unten), fehlende Teile per winget nachinstallieren |
-| 4 | Abhängigkeiten installieren (`npm ci`) |
-| 5 | `.env.local` aus `.env.example` anlegen, falls sie fehlt |
-| 6 | Datenbank anlegen und Standard-Kategorien einspielen |
-| 7 | Admin-Konto erstellen (E-Mail wird im Installer-Wizard abgefragt) |
-| 8 | App bauen |
-| 9 | Server starten (Port 3200) |
-| 10 | Autostart einrichten (Aufgabenplanung, Trigger "bei Login") |
-| 11 | Temporäres Passwort in die Zwischenablage kopieren und in einem Dialog anzeigen |
+| 3 | Abhängigkeiten installieren (`npm ci`) |
+| 4 | `.env.local` aus `.env.example` anlegen, falls sie fehlt |
+| 5 | Datenbank anlegen und Standard-Kategorien einspielen |
+| 6 | Admin-Konto erstellen (E-Mail wird im Installer-Wizard abgefragt) |
+| 7 | App bauen |
+| 8 | Server starten (Port 3200) |
+| 9 | Autostart einrichten (Aufgabenplanung, Trigger "bei Login") |
+| 10 | Temporäres Passwort in die Zwischenablage kopieren und in einem Dialog anzeigen |
 
 Kein Node-Handbetrieb nötig: `install.ps1` lädt bei Bedarf automatisch die
 aktuell passende Node-LTS-Version von nodejs.org und legt sie portabel unter
 `node-runtime\` im Projektordner ab — eine eventuell bereits vorhandene,
 andere Node-Installation auf dem Rechner bleibt unangetastet.
 
-### Build-Werkzeuge (Visual Studio Build Tools + Python)
+### Keine Build-Werkzeuge nötig
 
-`better-sqlite3` hat keine vorkompilierten Windows-Binaries und kompiliert bei
-jeder Installation nativen Code — dafür braucht `node-gyp` sowohl die Visual
-Studio Build Tools (Workload "Desktop development with C++") als auch Python.
-Fehlt eines von beiden, installiert `install.ps1` es automatisch über
-`winget`:
+`better-sqlite3` liefert vorkompilierte Binaries mit — Node-API-Prebuilds für
+`win32-x64` und `win32-arm64` (dazu macOS und Linux). „Node-API" heißt dabei
+ABI-stabil: ein neuer Node-Hauptversionssprung entwertet sie nicht. Diese
+Installation braucht deshalb **weder Python noch einen C++-Compiler**.
 
-```powershell
-winget install --id Microsoft.VisualStudio.2022.BuildTools --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
-winget install --id Python.Python.3.12
-```
+Frühere Fassungen installierten hier über `winget` die Visual Studio Build
+Tools (2–4 GB, mit UAC-Abfrage) und Python, mit der Begründung,
+`better-sqlite3` müsse bei jeder Installation nativen Code kompilieren. Das war
+falsch: sein `binding.gyp` ist ausdrücklich dafür gebaut, bei vorhandenem
+Prebuild nichts zu tun. Ein Messlauf am 18.09.2026 zeigte, dass `node-gyp`
+dabei zwar `MSBuild.exe` startet, aber keine einzige `.node`-Datei erzeugt —
+die Werkzeuge wurden für einen Build gebraucht, der nichts produziert. Der
+Schritt ist entfallen.
 
-Die Build-Tools-Installation self-elevated über ihre eigene UAC-Abfrage —
-`install.ps1` selbst bleibt dabei unprivilegiert. Das kann beim ersten Mal
-mehrere Minuten dauern; ein zweiter Installer-Lauf überspringt diesen Schritt,
-sobald beides erkannt wird. Schlägt die automatische Installation fehl (z. B.
-kein `winget` vorhanden), bricht der Installer mit dem jeweiligen
-`winget`-Befehl zum manuellen Nachholen ab.
+Seit npm 12 blockiert npm die Install-Scripts von Abhängigkeiten ohnehin,
+solange sie nicht im `allowScripts`-Feld der `package.json` stehen. Dort sind
+alle betroffenen Pakete bewusst auf `false` gesetzt — jedes davon bezieht sein
+Binary aus einem Plattform-Paket und braucht sein Script nicht:
+
+| Paket | Script | Woher das Binary stattdessen kommt |
+| --- | --- | --- |
+| `better-sqlite3` | `node-gyp rebuild` | `prebuilds\win32-x64.node` im Paket selbst |
+| `esbuild` (3 Fassungen) | `node install.js` | `@esbuild/win32-x64` |
+| `sharp` | `node install/check.js` | `@img/sharp-win32-x64` |
+| `unrs-resolver` | `node postinstall.js` | `@unrs/resolver-binding-win32-x64-msvc` |
+
+Nachgeprüft: mit allen vier blockiert laufen `npm ci` und `npm run build`
+fehlerfrei durch, und die Datenbank ist lesbar.
+
+Fehlt für eine Plattform einmal ein Prebuild (etwa bei 32-Bit-Node), meldet das
+der `better-sqlite3`-Ladetest im Installer und nennt die dann nötigen Schritte:
+Build-Werkzeuge installieren **und** `npm install-scripts approve
+better-sqlite3` — ohne die Freigabe bliebe `node-gyp` blockiert und der
+Compiler nutzlos.
 
 ## Direkt nach der Installation
 
@@ -143,11 +159,12 @@ cd $env:LOCALAPPDATA\Abo-Tracker
 installscript\windows\uninstall.ps1 -KeepData    # sichert data\ auf den Desktop
 ```
 
-Visual Studio Build Tools und Python (falls vom Installer automatisch
-nachinstalliert, siehe [oben](#build-werkzeuge-visual-studio-build-tools--python))
-werden von der Deinstallation **nicht** angerührt — das sind eigenständige
-System-Werkzeuge, kein Teil der App, und andere Software könnte sie
-ebenfalls nutzen. Wer sie manuell entfernen will:
+Visual Studio Build Tools und Python werden von der Deinstallation **nicht**
+angerührt. Seit dem Wegfall des Build-Werkzeuge-Schritts (siehe
+[oben](#keine-build-werkzeuge-nötig)) installiert der Installer sie ohnehin
+nicht mehr — auf älteren Installationen können sie aber noch von früher
+liegen. Es sind eigenständige System-Werkzeuge, kein Teil der App, und andere
+Software könnte sie ebenfalls nutzen. Wer sie manuell entfernen will:
 
 ```powershell
 winget uninstall --id Microsoft.VisualStudio.2022.BuildTools
@@ -158,7 +175,7 @@ winget uninstall --id Python.Python.3.12
 
 | Symptom | Ursache und Abhilfe |
 | --- | --- |
-| `better-sqlite3 lässt sich nicht laden` / `npm install fehlgeschlagen` | Normalerweise fängt Schritt 3 (siehe oben) das ab. Bricht es trotzdem ab, fehlt meist `winget` selbst, oder die automatische Installation wurde abgebrochen (z. B. UAC-Dialog weggeklickt) — der Installer nennt dann den passenden `winget install`-Befehl zum manuellen Nachholen. |
+| `better-sqlite3 lässt sich nicht laden` / `npm install fehlgeschlagen` | Der Installer grenzt die Ursache selbst ein und sagt, welcher der drei Fälle vorliegt: kein Prebuild für diese Plattform (dann nennt er Build-Werkzeuge **und** `npm install-scripts approve better-sqlite3`), beschädigtes `node_modules` (`Remove-Item -Recurse -Force node_modules; npm ci`), oder `better-sqlite3` gar nicht installiert (`npm ci`). Blockierte Install-Scripts in der npm-Ausgabe sind dabei normal und **nicht** die Ursache — siehe [oben](#keine-build-werkzeuge-nötig). |
 | Server startet nicht | `prod-server.err.log` im Projektordner zeigt den Grund. |
 | `install.log` fehlt oder zeigt nichts Hilfreiches | Liegt im Projektordner (`%LOCALAPPDATA%\Abo-Tracker\install.log`) — enthält die komplette Ausgabe von `bootstrap.ps1`/`install.ps1`, auch wenn das Konsolenfenster sich schon geschlossen hat. |
 | Autostart-Task fehlt nach einem Windows-Update | `installscript\windows\install.ps1` erneut ausführen — legt den Task neu an. Schlägt die Task-Registrierung fehl (z. B. Gruppenrichtlinie), bricht das die Installation nicht ab, nur der Autostart fehlt dann. |

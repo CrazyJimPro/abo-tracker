@@ -1,231 +1,252 @@
 # Abo-Tracker unter Windows
 
-Windows-Pendant zu den Bash-Scripts in [`../`](../README.md). Statt Terminal
-und Bash gibt es hier PowerShell-Scripts, verpackt in einen Inno-Setup-
-Installer, der als eine einzige `.exe` verteilt wird.
+Anleitung für Windows 10 und 11. Was auf Windows und Linux gleich ist (was
+eine Sicherung ist, was beim Zurückspielen passiert, woran man ein Update
+erkennt), steht in der [allgemeinen Anleitung](../README.md).
 
-## Installer bauen
+- [Erstinstallation](#erstinstallation)
+- [Im Alltag](#im-alltag)
+- [Sicherung erstellen](#sicherung-erstellen)
+- [Sicherung zurückspielen](#sicherung-zurückspielen)
+- [Update](#update)
+- [Deinstallation](#deinstallation)
+- [Wenn etwas nicht klappt](#wenn-etwas-nicht-klappt)
+- [Technische Details](#technische-details)
 
-**Automatisch (empfohlen):** Der Workflow
-[`build-windows-installer.yml`](../../.github/workflows/build-windows-installer.yml)
-baut die `.exe` auf einem `windows-latest`-Runner:
+---
 
-- Push eines `v*`-Tags baut sie und hängt sie als Asset an das zugehörige
-  GitHub Release an.
-- Manuell auslösbar über *Actions → Windows-Installer bauen → Run workflow* —
-  liefert die `.exe` nur als herunterladbares Artifact, ohne ein Release
-  anzufassen (praktisch für einen Testlauf auf einer VM).
+## Erstinstallation
 
-**Von Hand:** Voraussetzung ist [Inno Setup](https://jrsoftware.org/isinfo.php)
-(bringt `iscc.exe` mit, die Kommandozeilen-Version des Compilers).
+**Du brauchst:** Windows 10 oder 11 (64 Bit) und eine Internetverbindung.
+Administratorrechte sind nicht nötig. Node.js oder andere Programme musst du
+nicht vorher installieren, der Installer bringt alles mit.
 
-```powershell
-iscc installscript\windows\setup.iss
-```
+1. **Installer herunterladen:**
+   <https://github.com/CrazyJimPro/abo-tracker/releases/latest/download/AboTrackerSetup.exe>
 
-Ergebnis: `installscript\windows\dist\AboTrackerSetup.exe`. Der Installer
-enthält nur die PowerShell-Scripts aus diesem Ordner — den App-Code lädt er
-bei der Installation selbst von GitHub (wie `bootstrap.sh` unter Linux),
-braucht also eine Internetverbindung.
+2. **`AboTrackerSetup.exe` starten** (Doppelklick).
+   Zeigt Windows „Der Computer wurde durch Windows geschützt“, auf
+   **Weitere Informationen** und dann **Trotzdem ausführen** klicken. Die
+   Warnung kommt, weil der Installer nicht kostenpflichtig signiert ist.
 
-## Was der Installer macht
+3. **Zielordner:** Den Vorschlag (`%LOCALAPPDATA%\Abo-Tracker`) übernehmen und
+   auf **Weiter** klicken.
 
-| Schritt | Inhalt |
+4. **Daten übernehmen:**
+   - **Neuer Start ohne alte Daten:** „Nein, ohne Sicherung weiter“ lassen.
+   - **Du hast eine Sicherung** (z. B. von einem anderen Rechner):
+     „Ja, Daten aus einer Sicherung übernehmen“ wählen. Auf der nächsten
+     Seite über **Durchsuchen …** die Sicherungsdatei auswählen (`.db`). Liegt
+     schon eine im Download-Ordner oder in `abo-backup` auf dem Desktop, ist
+     die neueste bereits eingetragen.
+
+5. **Admin-Zugang:** Deine E-Mail-Adresse eingeben. Damit meldest du dich
+   später an. Diese Seite erscheint nicht, wenn du eine Sicherung übernimmst,
+   denn dann kommen die Konten aus der Sicherung.
+
+6. **Installieren** klicken. Ein schwarzes Fenster zeigt den Fortschritt. Das
+   dauert meist **2–5 Minuten**. Das Fenster bitte nicht schließen.
+
+7. **Am Ende** erscheint ein Fenster mit deinem **vorläufigen Passwort**. Es
+   ist schon in der Zwischenablage, du kannst es also direkt mit **Strg+V**
+   einfügen. Es wird nirgends noch einmal angezeigt.
+   Hast du eine Sicherung übernommen, meldet das Fenster stattdessen, wie
+   viele Konten und Abos eingespielt wurden. Dann gilt dein altes Passwort.
+
+8. Der Browser öffnet sich mit <http://localhost:3200>. Anmelden und dem
+   neuen Passwort folgen, siehe
+   [Nach der ersten Installation](../README.md#nach-der-ersten-installation).
+
+Beim ersten Start fragt eventuell die **Windows-Firewall** nach. Mit
+„Zulassen“ ist die App auch vom Handy im Heimnetz erreichbar. Brauchst du das
+nicht, kannst du ablehnen, am Rechner selbst funktioniert sie trotzdem.
+
+---
+
+## Im Alltag
+
+Der Server startet **automatisch, sobald du dich bei Windows anmeldest**. Du
+musst nichts weiter tun, einfach den Browser öffnen.
+
+Im **Startmenü** unter *Abo-Tracker* findest du:
+
+| Eintrag | Wozu |
 | --- | --- |
-| 1 | App-Code von GitHub holen (`bootstrap.ps1`) nach `%LOCALAPPDATA%\Abo-Tracker` |
-| 2 | Node.js suchen (>= 22.18), sonst portabel nach `node-runtime\` laden — kein Systemeingriff |
-| 3 | Abhängigkeiten installieren (`npm ci`) |
-| 4 | `.env.local` aus `.env.example` anlegen, falls sie fehlt |
-| 5 | Datenbank anlegen und Standard-Kategorien einspielen |
-| 6 | Admin-Konto erstellen (E-Mail wird im Installer-Wizard abgefragt) |
-| 7 | App bauen |
-| 8 | Server starten (Port 3200) |
-| 9 | Autostart einrichten (Aufgabenplanung, Trigger "bei Login") |
-| 10 | Temporäres Passwort in die Zwischenablage kopieren und in einem Dialog anzeigen |
+| **Abo-Tracker öffnen** | öffnet die App im Browser (und startet den Server, falls er nicht läuft) |
+| **Abo-Tracker starten** / **stoppen** | Server von Hand starten bzw. anhalten |
+| **Abo-Tracker sichern** | legt eine Sicherung auf dem Desktop ab, siehe unten |
+| **Abo-Tracker wiederherstellen** | spielt eine Sicherung zurück, siehe unten |
+| **Deinstallieren** | entfernt den Abo-Tracker |
 
-Kein Node-Handbetrieb nötig: `install.ps1` lädt bei Bedarf automatisch die
-aktuell passende Node-LTS-Version von nodejs.org und legt sie portabel unter
-`node-runtime\` im Projektordner ab — eine eventuell bereits vorhandene,
-andere Node-Installation auf dem Rechner bleibt unangetastet.
+---
 
-### Keine Build-Werkzeuge nötig
+## Sicherung erstellen
 
-`better-sqlite3` liefert vorkompilierte Binaries mit — Node-API-Prebuilds für
-`win32-x64` und `win32-arm64` (dazu macOS und Linux). „Node-API" heißt dabei
-ABI-stabil: ein neuer Node-Hauptversionssprung entwertet sie nicht. Diese
-Installation braucht deshalb **weder Python noch einen C++-Compiler**.
+**Empfohlen:** in der App unter **Einstellungen → Sicherung erstellen**. Die
+Datei landet in deinem Download-Ordner. Näheres dazu in der
+[allgemeinen Anleitung](../README.md#backup).
 
-Frühere Fassungen installierten hier über `winget` die Visual Studio Build
-Tools (2–4 GB, mit UAC-Abfrage) und Python, mit der Begründung,
-`better-sqlite3` müsse bei jeder Installation nativen Code kompilieren. Das war
-falsch: sein `binding.gyp` ist ausdrücklich dafür gebaut, bei vorhandenem
-Prebuild nichts zu tun. Ein Messlauf am 18.09.2026 zeigte, dass `node-gyp`
-dabei zwar `MSBuild.exe` startet, aber keine einzige `.node`-Datei erzeugt —
-die Werkzeuge wurden für einen Build gebraucht, der nichts produziert. Der
-Schritt ist entfallen.
+**Alternativ über das Startmenü:** *Abo-Tracker sichern*. Das legt die
+Sicherung im Ordner **`abo-backup`** auf deinem Desktop ab
+(`abo-tracker-<Datum>.db`) und zeigt am Ende ein Fenster mit dem Ergebnis.
+Es bleiben die **letzten 10** Sicherungen liegen, ältere werden automatisch
+gelöscht. Nutzt du OneDrive, landet der Ordner auf dem Desktop, den du
+tatsächlich siehst.
 
-Seit npm 12 blockiert npm die Install-Scripts von Abhängigkeiten ohnehin,
-solange sie nicht im `allowScripts`-Feld der `package.json` stehen. Dort sind
-alle betroffenen Pakete bewusst auf `false` gesetzt — jedes davon bezieht sein
-Binary aus einem Plattform-Paket und braucht sein Script nicht:
+Beides funktioniert, während der Abo-Tracker läuft.
 
-| Paket | Script | Woher das Binary stattdessen kommt |
-| --- | --- | --- |
-| `better-sqlite3` | `node-gyp rebuild` | `prebuilds\win32-x64.node` im Paket selbst |
-| `esbuild` (3 Fassungen) | `node install.js` | `@esbuild/win32-x64` |
-| `sharp` | `node install/check.js` | `@img/sharp-win32-x64` |
-| `unrs-resolver` | `node postinstall.js` | `@unrs/resolver-binding-win32-x64-msvc` |
+---
 
-Nachgeprüft: mit allen vier blockiert laufen `npm ci` und `npm run build`
-fehlerfrei durch, und die Datenbank ist lesbar.
+## Sicherung zurückspielen
 
-Fehlt für eine Plattform einmal ein Prebuild (etwa bei 32-Bit-Node), meldet das
-der `better-sqlite3`-Ladetest im Installer und nennt die dann nötigen Schritte:
-Build-Werkzeuge installieren **und** `npm install-scripts approve
-better-sqlite3` — ohne die Freigabe bliebe `node-gyp` blockiert und der
-Compiler nutzlos.
+### Bei der Installation
 
-## Direkt nach der Installation
+Auf der Installer-Seite **Daten übernehmen** „Ja“ wählen und die
+Sicherungsdatei auswählen, siehe [Erstinstallation](#erstinstallation),
+Schritt 4. Das geht auch über eine bestehende Installation: Die bisherige
+Datenbank wird dann vorher auf dem Desktop gesichert, der Installer fragt
+dafür noch einmal nach.
 
-1. **Einloggen** unter <http://localhost:3200> mit der im Installer
-   angegebenen E-Mail. Das temporäre Passwort steht am Ende in einem Dialog
-   und ist zu diesem Zeitpunkt bereits in der Zwischenablage — einfach mit
-   Strg+V ins Passwortfeld einfügen. Es wird nirgends noch einmal angezeigt.
-2. **Passwort ändern.** Die App verlangt das beim ersten Login von sich aus.
+### In einer bestehenden Installation
 
-Laufender Betrieb:
+Startmenü → **Abo-Tracker wiederherstellen**. Ein Fenster zeigt, welche
+Sicherung eingespielt wird (die neueste aus dem Download-Ordner oder aus
+`abo-backup` auf dem Desktop), und fragt nach. Mit **j** und Enter
+bestätigen. Der Server wird dabei kurz angehalten und danach wieder
+gestartet.
+
+**Liegt die Sicherung woanders?** Dann PowerShell öffnen und den Pfad
+angeben:
 
 ```powershell
-installscript\windows\open-app.ps1      # startet den Server falls nötig und öffnet den Browser
-installscript\windows\start-prod.ps1    # Server von Hand starten
-installscript\windows\stop-prod.ps1     # Server stoppen
+cd $env:LOCALAPPDATA\Abo-Tracker
+installscript\windows\restore.ps1 -From "D:\Sicherungen\abo-tracker-2026-09-19.db"
 ```
 
-`start-prod.ps1` tut nichts, wenn der Server bereits läuft, und
-`stop-prod.ps1` fasst einen **fremden** Prozess auf dem Port nicht an,
-sondern meldet ihn — auf Port 3200 kann schließlich auch etwas anderes
-lauschen.
+Was dabei passiert und was du danach beachten solltest (z. B. dass die
+Passwörter vom Zeitpunkt der Sicherung zurückkommen), steht in der
+[allgemeinen Anleitung](../README.md#restore).
 
-Log-Dateien: `prod-server.log` (Ausgabe) und `prod-server.err.log` (Fehler)
-im Projektordner.
+---
 
 ## Update
 
-```powershell
-cd $env:LOCALAPPDATA\Abo-Tracker
-git pull   # falls per git installiert; sonst: Installer erneut ausführen
-installscript\windows\install.ps1
-```
+Zeigt die App **„Update verfügbar“** an:
 
-Erneutes Ausführen des Installers (`AboTrackerSetup.exe`) aktualisiert eine
-bestehende Installation ebenfalls — Datenbank und Konten bleiben dabei
-erhalten, `bootstrap.ps1` lädt nur den aktuellen App-Code neu.
+1. **Sicherung erstellen**: in der App *Einstellungen → Sicherung erstellen*.
+2. **Neuen Installer herunterladen:** auf den Hinweis „Update verfügbar“
+   klicken, auf der GitHub-Seite unten bei *Assets* auf
+   **AboTrackerSetup.exe** klicken. Oder direkt:
+   <https://github.com/CrazyJimPro/abo-tracker/releases/latest/download/AboTrackerSetup.exe>
+3. **`AboTrackerSetup.exe` starten** und durchklicken:
+   - Zielordner: unverändert lassen.
+   - Daten übernehmen: **„Nein, ohne Sicherung weiter“**. Deine vorhandenen
+     Daten bleiben erhalten.
+   - Die Frage nach der E-Mail entfällt beim Update.
+4. Das schwarze Fenster läuft wieder ein paar Minuten durch. Der Server wird
+   dabei automatisch angehalten und neu gestartet.
+5. Browser neu laden. Die neue Versionsnummer steht oben neben dem Schriftzug,
+   der Update-Hinweis ist weg.
 
-## Backup
+Bitte immer die **neue** `AboTrackerSetup.exe` herunterladen. Eine ältere
+bringt die App zwar auch auf den neuesten Stand, neue Einträge im Startmenü
+und die richtige Versionsnummer unter *Apps* kommen aber nur mit dem neuen
+Installer.
 
-Wie unter Linux ist nur **`data\`** zu sichern — darin liegt
-`abo-tracker.db` mit allem, was nicht wiederherstellbar ist.
-
-Am einfachsten über den Startmenü-Eintrag **„Abo-Tracker sichern“** oder:
-
-```powershell
-cd $env:LOCALAPPDATA\Abo-Tracker
-installscript\windows\backup.ps1
-```
-
-Das legt per SQLite-Online-Backup `abo-backup\abo-tracker-<Datum>.db` auf dem
-Desktop ab (Pendant zu `scripts/backup-to-desktop.sh`). Der Server darf dabei
-laufen, die Sicherung ist trotz WAL-Modus in sich stimmig. Es bleiben die
-letzten 10 Sicherungen liegen, ältere löscht das Script. Als Desktop gilt der
-Ordner, den Windows dafür eingetragen hat — mit OneDrive-Sicherung also
-`OneDrive\Desktop`, nicht `%USERPROFILE%\Desktop`.
-
-Wer lieber den ganzen Ordner kopiert, muss vorher den Server stoppen, sonst
-fehlt der Kopie womöglich, was noch in `abo-tracker.db-wal` steht:
-
-```powershell
-installscript\windows\stop-prod.ps1
-Copy-Item data "$([Environment]::GetFolderPath('Desktop'))\abo-tracker-backup-$(Get-Date -Format 'yyyy-MM-dd')" -Recurse
-installscript\windows\start-prod.ps1
-```
-
-### Wiederherstellen
-
-**Bei der Installation:** Der Installer fragt auf der Seite „Daten
-übernehmen“, ob eine Sicherung eingespielt werden soll, und schlägt die
-neueste aus `abo-backup` auf dem Desktop vor. Genauso geht die
-`abo-tracker.db` aus einem Ordner `abo-tracker-backup-<Datum>`, den die
-Deinstallation angelegt hat. Konten und Passwörter kommen dann aus der
-Sicherung, die Frage nach der Admin-E-Mail entfällt.
-
-**In einer bestehenden Installation:** Startmenü-Eintrag **„Abo-Tracker
-wiederherstellen“** (nimmt die neueste Sicherung und fragt vorher nach) oder:
-
-```powershell
-cd $env:LOCALAPPDATA\Abo-Tracker
-installscript\windows\restore.ps1                  # neueste aus abo-backup
-installscript\windows\restore.ps1 -From <pfad>     # bestimmte .db oder Ordner
-```
-
-In beiden Fällen wird die Sicherung vorher geprüft (SQLite, intakt,
-Abo-Tracker-Datenbank, nicht aus einer neueren App-Version). Eine schon
-vorhandene Datenbank landet vorher als
-`abo-backup\vor-wiederherstellung-<Zeit>.db` auf dem Desktop, danach bringen
-die Migrationen eine ältere Sicherung auf den aktuellen Stand. Scheitert die
-Prüfung, bleibt die bisherige Datenbank unverändert.
-
-**CSV-Export/-Import** (Einstellungen in der App) ist kein Ersatz dafür: Er
-enthält nur die Abos des angemeldeten Kontos, keine Konten, Preishistorie
-oder Benachrichtigungen. Die exportierte Datei öffnet sich direkt in Excel
-und lässt sich auch nach dem Speichern in Excel (Windows-1252, deutsches
-Datumsformat) wieder importieren.
+---
 
 ## Deinstallation
 
-Über **Einstellungen → Apps → Abo-Tracker → Deinstallieren**, oder den
-Eintrag "Deinstallieren" in der Startmenü-Programmgruppe, oder direkt
-`%LOCALAPPDATA%\Abo-Tracker\unins000.exe` ausführen. Das stoppt den Server,
-entfernt den Autostart-Task und löscht danach den kompletten Projektordner
-(App-Code, `node_modules`, Node-Runtime, Datenbank — alles).
+**Einstellungen → Apps → Installierte Apps → Abo-Tracker → Deinstallieren**
+(oder Startmenü → *Abo-Tracker* → *Deinstallieren*).
 
-Findet der Deinstaller dabei eine Datenbank, **fragt er vorher nach**, ob eine
-Kopie auf dem Desktop abgelegt werden soll (`abo-tracker-backup-<Datum>`).
-Schlägt diese Sicherung fehl, hält er an und fragt, ob trotzdem gelöscht
-werden soll — die Datenbank ist das einzige an der ganzen Installation, was
-sich nicht wiederherstellen lässt.
+Der Deinstaller hält den Server an, entfernt den Autostart und löscht den
+kompletten Programmordner, **einschließlich deiner Daten**. Vorher fragt er,
+ob eine Kopie der Datenbank auf dem Desktop abgelegt werden soll (Ordner
+`abo-tracker-backup-<Datum>`). Sag **Ja**, wenn du die Daten noch brauchst.
+Die Datei `abo-tracker.db` in diesem Ordner kannst du später beim
+Installieren als Sicherung auswählen.
 
-**Nicht** `installscript\windows\uninstall.ps1` direkt ausführen, um zu
-deinstallieren — das ist nur ein Hilfsskript, das der echte Deinstaller
-(`unins000.exe`) im Hintergrund aufruft, um Server und Autostart-Task zu
-stoppen. Es löscht den Ordner selbst nicht; direkt ausgeführt bleibt der
-komplette Projektordner (inklusive Datenbank) danach liegen. Für eine
-Sicherung *ohne* Deinstallation taugt es aber:
+---
 
-```powershell
-cd $env:LOCALAPPDATA\Abo-Tracker
-installscript\windows\uninstall.ps1 -KeepData    # sichert data\ auf den Desktop
-```
+## Wenn etwas nicht klappt
 
-Visual Studio Build Tools und Python werden von der Deinstallation **nicht**
-angerührt. Seit dem Wegfall des Build-Werkzeuge-Schritts (siehe
-[oben](#keine-build-werkzeuge-nötig)) installiert der Installer sie ohnehin
-nicht mehr — auf älteren Installationen können sie aber noch von früher
-liegen. Es sind eigenständige System-Werkzeuge, kein Teil der App, und andere
-Software könnte sie ebenfalls nutzen. Wer sie manuell entfernen will:
+| Problem | Lösung |
+| --- | --- |
+| Die App lädt nicht im Browser | Startmenü → *Abo-Tracker öffnen*, das startet den Server bei Bedarf. |
+| Installation bricht ab | Im Programmordner `%LOCALAPPDATA%\Abo-Tracker` liegt `install.log` mit der kompletten Ausgabe, auch wenn das Fenster schon zu ist. Die Datei hilft bei der Fehlersuche. |
+| Server startet nicht | `prod-server.err.log` im Programmordner nennt den Grund. |
+| Passwort vergessen | Eine andere Person mit Admin-Rechten setzt es im Bereich *Admin* zurück. Das vorläufige Passwort steht absichtlich nirgends gespeichert, auch nicht in `install.log`. |
+| „Keine Sicherung gefunden“ bei *Abo-Tracker wiederherstellen* | Die Sicherung liegt weder im Download-Ordner noch in `abo-backup` auf dem Desktop. Mit `-From` den Pfad angeben, siehe [oben](#in-einer-bestehenden-installation). |
+| Nach einem Windows-Update startet der Server nicht mehr automatisch | Den Installer erneut ausführen (wie beim [Update](#update)), das richtet den Autostart neu ein. |
+| „Port 3200 ist belegt“ | Ein anderes Programm nutzt denselben Port. `installscript\windows\start-prod.ps1 -Port 3300` startet auf einem anderen. |
+| App nur auf diesem Rechner nutzen, keine Firewall-Abfrage | `installscript\windows\start-prod.ps1 -BindHost 127.0.0.1` |
+
+---
+
+## Technische Details
+
+Für alle, die wissen wollen, was unter der Haube passiert.
+
+### Was der Installer macht
+
+Die `.exe` enthält nur ein paar PowerShell-Skripte. Den eigentlichen
+Programmcode lädt sie bei jeder Installation frisch von GitHub.
+
+| Schritt | Inhalt |
+| --- | --- |
+| 1 | aktuellen Programmcode von GitHub laden (`bootstrap.ps1`) |
+| 2 | Node.js suchen (ab 22.18), sonst portabel nach `node-runtime\` laden, ohne Eingriff ins System |
+| 3 | Abhängigkeiten installieren (`npm ci --ignore-scripts`) |
+| 4 | `.env.local` anlegen, falls sie fehlt |
+| 5 | ggf. Sicherung einspielen, dann Datenbank anlegen bzw. aktualisieren |
+| 6 | Admin-Konto anlegen, falls noch keins existiert |
+| 7 | App bauen, Server starten (Port 3200) |
+| 8 | Autostart über die Aufgabenplanung einrichten (Aufgabe „AboTracker“, bei Anmeldung) |
+
+Alle Schritte laufen über `install.ps1` und sind wiederholbar: Ein zweiter
+Lauf aktualisiert, ohne Daten anzufassen. Die Skripte liegen nach der
+Installation unter `installscript\windows\` im Programmordner:
+
+| Skript | Zweck |
+| --- | --- |
+| `install.ps1` | Installation / Update (Optionen: `-Email`, `-RestoreFrom <pfad>`, `-Port`, `-NoStart`, `-NoOpen`, `-NoAutostart`) |
+| `open-app.ps1`, `start-prod.ps1`, `stop-prod.ps1` | Server und Browser |
+| `backup.ps1` | Sicherung nach `Desktop\abo-backup` (`-ShowResult` zeigt ein Ergebnisfenster) |
+| `restore.ps1` | Sicherung zurückspielen (`-From <pfad>`, `-Force` ohne Nachfrage) |
+| `uninstall.ps1` | Hilfsskript des Deinstallers. Nicht zum Deinstallieren direkt aufrufen, es löscht den Ordner nicht. `-KeepData` kopiert `data\` auf den Desktop. |
+
+### Keine Build-Werkzeuge nötig
+
+`better-sqlite3`, die Datenbank-Bibliothek, bringt fertig kompilierte Dateien
+für Windows (x64 und ARM64) mit. Python oder Visual Studio Build Tools
+braucht es deshalb nicht. Frühere Versionen des Installers haben beides
+installiert. Das war unnötig, sie liegen auf älteren Installationen eventuell
+noch herum und werden beim Deinstallieren nicht entfernt. Wer sie nicht
+anderweitig braucht:
 
 ```powershell
 winget uninstall --id Microsoft.VisualStudio.2022.BuildTools
 winget uninstall --id Python.Python.3.12
 ```
 
-## Wenn etwas klemmt
+Die Installation läuft mit `npm ci --ignore-scripts`: Keine Abhängigkeit
+braucht ihr Installationsskript, jede bezieht ihre fertigen Dateien aus einem
+Plattform-Paket. Das zusätzliche `allowScripts`-Feld in `package.json`
+versteht erst npm 12. Ältere npm-Versionen (npm 10 bei Node 22) würden für
+`better-sqlite3` sonst einen unnötigen Compiler-Lauf starten, der ohne Build
+Tools scheitert.
 
-| Symptom | Ursache und Abhilfe |
-| --- | --- |
-| `better-sqlite3 lässt sich nicht laden` / `npm install fehlgeschlagen` | Der Installer grenzt die Ursache selbst ein und sagt, welcher der drei Fälle vorliegt: kein Prebuild für diese Plattform (dann nennt er Build-Werkzeuge **und** `npm install-scripts approve better-sqlite3`), beschädigtes `node_modules` (`Remove-Item -Recurse -Force node_modules; npm ci`), oder `better-sqlite3` gar nicht installiert (`npm ci`). Blockierte Install-Scripts in der npm-Ausgabe sind dabei normal und **nicht** die Ursache — siehe [oben](#keine-build-werkzeuge-nötig). |
-| Server startet nicht | `prod-server.err.log` im Projektordner zeigt den Grund. |
-| `install.log` fehlt oder zeigt nichts Hilfreiches | Liegt im Projektordner (`%LOCALAPPDATA%\Abo-Tracker\install.log`) — enthält die komplette Ausgabe von `bootstrap.ps1`/`install.ps1`, auch wenn das Konsolenfenster sich schon geschlossen hat. |
-| Autostart-Task fehlt nach einem Windows-Update | `installscript\windows\install.ps1` erneut ausführen — legt den Task neu an. Schlägt die Task-Registrierung fehl (z. B. Gruppenrichtlinie), bricht das die Installation nicht ab, nur der Autostart fehlt dann. |
-| Port 3200 belegt | `installscript\windows\start-prod.ps1 -Port 3300` (und beim nächsten `install.ps1`-Lauf ebenfalls `-Port 3300` mitgeben). Lauscht dort fremde Software, bricht der Installer ab, statt sie zu beenden. |
-| Windows-Firewall fragt beim ersten Start nach | Next.js lauscht wie unter Linux auf allen Schnittstellen, damit die App auch von anderen Geräten im Heimnetz erreichbar ist. Wer das nicht braucht: `start-prod.ps1 -BindHost 127.0.0.1` — dann bleibt die App rein lokal und die Abfrage entfällt. |
-| Passwort vergessen, `install.log` durchsucht | Steht dort nicht drin — das temporäre Passwort wird bewusst am Transcript vorbei ausgegeben, damit es nicht dauerhaft im Klartext neben der Datenbank liegt. Zurücksetzen geht im Bereich `/admin` oder über eine zweite Admin-Person. |
+### Installer selbst bauen
+
+Normalerweise nicht nötig: Bei jedem Versions-Tag (`v*`) baut der Workflow
+[`build-windows-installer.yml`](../../.github/workflows/build-windows-installer.yml)
+die `.exe` und hängt sie an das GitHub-Release. Über *Actions → Windows-
+Installer bauen → Run workflow* lässt sie sich auch ohne Release bauen (zum
+Testen). Von Hand, mit [Inno Setup](https://jrsoftware.org/isinfo.php):
+
+```powershell
+iscc installscript\windows\setup.iss
+```
+
+Ergebnis: `installscript\windows\dist\AboTrackerSetup.exe`.

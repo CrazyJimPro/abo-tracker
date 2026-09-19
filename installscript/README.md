@@ -1,288 +1,174 @@
-# Installation, Backup, Restore und Deinstallation
+# Abo-Tracker – Anleitung
 
-Alles, was zum Aufsetzen und Betreiben des Abo-Trackers auf einem eigenen
-Rechner nötig ist. Die App läuft komplett lokal: ein Next.js-Server und eine
-SQLite-Datei, kein Cloud-Dienst, keine externen Accounts.
+Diese Anleitung erklärt, wie du den Abo-Tracker installierst, deine Daten
+sicherst, eine Sicherung zurückspielst und auf eine neue Version
+aktualisierst.
 
-## Schnellstart
+Die Schritte am Rechner unterscheiden sich zwischen Windows und Linux. Sie
+stehen deshalb in zwei eigenen Anleitungen:
 
-Diesen Befehl im Terminal einfügen und ausführen:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/CrazyJimPro/abo-tracker/main/installscript/bootstrap.sh | bash
-```
-
-Der Befehl holt das Projekt nach `~/abo-tracker` und startet dort die
-Installation. Am Ende öffnet sich der Browser und die App ist einsatzbereit.
-
-Voraussetzungen: `git` und eine Internetverbindung. Node.js braucht **nicht**
-vorher installiert zu sein — fehlt es oder ist es zu alt, bietet das Script an,
-Node 24 über nvm nachzuinstallieren.
-
-Anderes Zielverzeichnis oder ein eigener Fork:
-
-```bash
-ABO_TRACKER_DIR=~/apps/abo-tracker curl -fsSL <url> | bash
-```
-
-Wenn das Repository schon lokal liegt, geht es direkt:
-
-```bash
-cd abo-tracker
-./installscript/install.sh
-```
-
-## Windows
-
-Für Windows gibt es einen eigenen Installer statt der Bash-Scripts: siehe
-[`windows/`](windows/). Ein Doppelklick auf `AboTrackerSetup.exe` installiert
-Node.js portabel (kein Systemeingriff, keine Admin-Rechte nötig), lädt den
-App-Code von GitHub, installiert Abhängigkeiten, legt Datenbank und
-Admin-Konto an, baut die App, startet den Server und richtet den Autostart
-bei Login über die Aufgabenplanung ein — inhaltlich dasselbe wie
-`bootstrap.sh` + `install.sh`, nur als grafischer Windows-Installer.
-
-Die `.exe` selbst muss einmalig mit [Inno Setup](https://jrsoftware.org/isinfo.php)
-gebaut werden (auf Windows, oder z.B. via GitHub Actions `windows-latest`):
-
-```powershell
-iscc installscript\windows\setup.iss
-```
-
-Ergebnis liegt danach unter `installscript\windows\dist\AboTrackerSetup.exe`.
-Details, Autostart-Verwaltung und Deinstallation stehen in
-[`windows/README.md`](windows/README.md).
-
-## Was dabei passiert (Linux)
-
-| Schritt | Inhalt |
+| Du benutzt … | Anleitung |
 | --- | --- |
-| 1 | Node.js suchen (>= 22.18), auf Wunsch über nvm nachinstallieren |
-| 2 | Abhängigkeiten installieren (`npm ci`) |
-| 3 | `.env.local` aus `.env.example` anlegen, falls sie fehlt |
-| 4 | Datenbank anlegen und Standard-Kategorien einspielen |
-| 5 | Admin-Konto erstellen, temporäres Passwort ausgeben |
-| 6 | App bauen |
-| 7 | Server starten (Port 3200) |
-| 8 | Autostart einrichten, damit der Server einen Neustart übersteht |
+| **Windows** 10 / 11 | [Anleitung für Windows](windows/README.md) |
+| **Linux** (z. B. Ubuntu, Debian, Mint) | [Anleitung für Linux](LINUX.md) |
 
-Das Script fragt unterwegs nach der E-Mail-Adresse für den Admin-Zugang und
-danach, ob der Autostart eingerichtet werden soll. Wer nichts gefragt werden
-will, gibt beides direkt mit:
+Alles, was auf beiden Systemen gleich funktioniert, steht hier auf dieser
+Seite.
 
-```bash
-./installscript/install.sh --email ich@example.com -y
-```
+---
 
-| Option | Wirkung |
-| --- | --- |
-| `--email <adresse>` | E-Mail des Admin-Kontos, statt Rückfrage |
-| `--port <nummer>` | Port des Servers (Standard: 3200) |
-| `--autostart` / `--no-autostart` | Autostart erzwingen bzw. überspringen |
-| `--no-open` | Browser am Ende nicht öffnen |
-| `--no-start` | Nur installieren, Server nicht starten |
-| `--restore <pfad>` | Sicherung einspielen, statt danach zu fragen (siehe [Restore](#restore)) |
-| `-y`, `--yes` | Keine Rückfragen, überall die Vorgabe |
+## Auf einen Blick
 
-## Direkt nach der Installation
+| | Windows | Linux |
+| --- | --- | --- |
+| **Installieren** | `AboTrackerSetup.exe` herunterladen und starten | einen Befehl im Terminal ausführen |
+| **Programmordner** | `%LOCALAPPDATA%\Abo-Tracker` | `~/abo-tracker` |
+| **App öffnen** | Startmenü → *Abo-Tracker öffnen* | im Browser <http://localhost:3200> |
+| **Sicherung erstellen** | in der App: *Einstellungen → Sicherung erstellen* | in der App: *Einstellungen → Sicherung erstellen* |
+| **Sicherung zurückspielen** | beim Installieren, oder Startmenü → *Abo-Tracker wiederherstellen* | beim Installieren, oder `scripts/restore.sh` |
+| **Aktualisieren** | neue `AboTrackerSetup.exe` herunterladen und starten | denselben Befehl wie beim Installieren erneut ausführen |
+| **Deinstallieren** | *Einstellungen → Apps → Abo-Tracker* | `./installscript/uninstall.sh` |
 
-1. **Einloggen** unter <http://localhost:3200> mit der angegebenen E-Mail und
-   dem temporären Passwort aus der Ausgabe. Das Passwort wird nur dieses eine
-   Mal angezeigt — in der Datenbank liegt danach nur noch ein scrypt-Hash.
-2. **Passwort ändern.** Die App verlangt das beim ersten Login von sich aus.
-3. **Loslegen:** unter *Abos* das erste Abo anlegen. Acht Kategorien sind schon
-   da, eigene lassen sich beim Anlegen eines Abos direkt ergänzen.
-4. **Weitere Personen** bekommen unter *Admin* ein Konto mit temporärem
-   Passwort — jede Person sieht ausschließlich ihre eigenen Abos.
+Der Abo-Tracker läuft komplett auf deinem eigenen Rechner: ein kleiner
+Server und eine Datenbank-Datei. Es gibt keinen Cloud-Dienst und kein Konto
+bei irgendeinem Anbieter. Für die Installation und für Updates braucht der
+Rechner eine Internetverbindung, im Betrieb nicht.
 
-Laufender Betrieb:
+---
 
-```bash
-scripts/start-prod.sh          # Server von Hand starten
-scripts/stop-prod.sh           # Server stoppen
-tail -f prod-server.log        # Log mitlesen
-```
+## Nach der ersten Installation
 
-## Update
+1. **Anmelden** unter <http://localhost:3200> mit der E-Mail-Adresse, die du
+   bei der Installation angegeben hast, und dem **vorläufigen Passwort**, das
+   dir die Installation am Ende anzeigt.
+   Das Passwort wird nur dieses eine Mal angezeigt. Notiere es dir sofort
+   (unter Windows liegt es zusätzlich schon in der Zwischenablage).
+2. **Neues Passwort festlegen.** Die App verlangt das beim ersten Anmelden.
+3. **Loslegen:** Unter *Abos* das erste Abo anlegen. Acht Kategorien sind
+   schon vorhanden, eigene kannst du beim Anlegen eines Abos ergänzen.
+4. **Weitere Personen** bekommen im Bereich *Admin* ein eigenes Konto. Jede
+   Person sieht nur ihre eigenen Abos.
 
-Der Header zeigt neben der laufenden Version, ob ein neueres Release verfügbar
-ist. Der Check fragt dafür direkt GitHubs Releases-API ab (unauthentifiziert,
-das Repo ist öffentlich) — ist eine neuere Version da, erscheint ein
-Hinweis-Badge, z.B. „Update verfügbar: v1.2.0", ein Klick darauf öffnet die
-passende Release-Seite auf GitHub. Ist GitHub gerade nicht erreichbar, bleibt
-der Badge einfach weg — kein Fehler, keine blockierte Seite.
+Hast du bei der Installation eine Sicherung zurückgespielt, entfällt das
+vorläufige Passwort: Du meldest dich mit den Zugangsdaten aus der Sicherung
+an.
 
-Auf den neuesten Stand bringen — die Installation bleibt dabei erhalten,
-Datenbank und Konten werden nicht angefasst:
+Die App ist auch von anderen Geräten im selben Heimnetz erreichbar (Handy,
+Tablet), und zwar unter `http://<IP-Adresse-des-Rechners>:3200`.
 
-```bash
-cd ~/abo-tracker
-git pull
-./installscript/install.sh
-```
-
-`install.sh` danach nicht durch ein bloßes `git pull` ersetzen, auch wenn das
-oft reichen würde — es installiert bei Bedarf auch neue Abhängigkeiten und
-wendet neue Datenbank-Migrationen an, ist aber schnell durchgelaufen, wenn
-sich nichts geändert hat.
+---
 
 ## Backup
 
-Zu sichern ist genau ein Verzeichnis: **`data/`**. Darin liegt
-`abo-tracker.db` mit allem, was nicht wiederherstellbar ist — Abos,
-Kategorien, Konten und Passwort-Hashes. Alles andere (Code, Abhängigkeiten,
-Build) kommt bei Bedarf aus Git zurück. Die optionale `.env.local` lohnt sich
-nur, wenn du den Datenbankpfad darin geändert hast.
+### Was ist eine Sicherung?
 
-> Behandle die Sicherung wie ein Passwort-Archiv: sie enthält die
-> Zugangsdaten aller Nutzer in gehashter Form.
+Alle deine Daten stecken in **einer einzigen Datei**, der Datenbank. Darin
+liegen alle Konten mit ihren Passwörtern, alle Abos, Kategorien und die
+Preishistorie. Programm und Einstellungen lassen sich jederzeit neu
+installieren, diese Datei nicht. Eine Sicherung ist eine Kopie genau dieser
+Datei, zum Beispiel `abo-tracker-2026-09-19.db`.
 
-Die Datenbank läuft im WAL-Modus. Deshalb reicht es **nicht**, die Datei im
-laufenden Betrieb einfach zu kopieren — ein Teil der Änderungen steht dann
-noch in `abo-tracker.db-wal` und die Kopie kann in sich widersprüchlich sein.
-Sauber sind diese Wege:
+> **Bewahre Sicherungen sorgfältig auf.** Wer die Datei hat, hat alle Daten.
+> Die Passwörter liegen darin zwar nur verschlüsselt (als Hash), die Abos
+> aber lesbar.
 
-**Am einfachsten — in der App:** Einstellungen → Sicherung → „Sicherung
-erstellen“ (nur für Admins). Das ist dasselbe Online-Backup wie
-Variante B, landet aber als `abo-tracker-<Datum>.db` im Download-Ordner des
-Browsers, auch von einem anderen Gerät aus.
+### Sicherung erstellen – in der App (empfohlen, Windows und Linux)
 
-**Variante A — Server kurz stoppen (ohne Zusatzwerkzeug):**
+1. In der App oben auf **Einstellungen** gehen.
+2. In der Karte **Sicherung** auf **Sicherung erstellen** klicken.
+3. Der Browser lädt die Datei `abo-tracker-<Datum>.db` in deinen
+   Download-Ordner.
+4. Die Datei an einen sicheren Ort verschieben, z. B. auf einen USB-Stick,
+   eine externe Festplatte oder in deinen Cloud-Speicher.
 
-```bash
-cd ~/abo-tracker
-scripts/stop-prod.sh                                      # Server anhalten
-cp -a data ~/abo-tracker-backup-$(date +%Y-%m-%d)         # sichern
-scripts/start-prod.sh &                                   # wieder starten
-```
+Das geht auch vom Handy oder von einem anderen Rechner aus. Der Server muss
+dafür nicht angehalten werden. Die Karte *Sicherung* sehen nur Admins, weil
+die Datei die Daten **aller** Personen enthält.
 
-Beim sauberen Beenden schreibt SQLite die WAL-Datei in die Datenbank zurück.
-`cp -a` auf den ganzen Ordner nimmt ohnehin alles mit, was da ist.
+Zusätzlich gibt es auf jedem System noch einen eigenen Weg, z. B. eine
+automatische Sicherung beim Hochfahren unter Linux. Das steht in der
+jeweiligen Anleitung.
 
-**Variante B — im laufenden Betrieb, ohne den Server anzuhalten:**
+### CSV-Export ist keine Sicherung
 
-```bash
-cd ~/abo-tracker
-node -e 'new (require("better-sqlite3"))("data/abo-tracker.db",{readonly:true}).backup(process.argv[1])' \
-  ~/abo-tracker-backup-$(date +%Y-%m-%d).db
-```
+Unter *Einstellungen → Daten* kann jede Person ihre eigenen Abos als
+CSV-Datei exportieren (öffnet sich in Excel oder LibreOffice) und wieder
+importieren. Das ist praktisch, um die Liste anzusehen oder zu bearbeiten.
+Die CSV-Datei enthält aber **keine** Konten, keine Passwörter und keine
+Preishistorie. Für den Ernstfall brauchst du die Sicherung von oben.
 
-Das ist die dafür vorgesehene Backup-Funktion von SQLite: sie liefert auch bei
-gleichzeitigen Schreibzugriffen einen konsistenten Stand, als eine einzige
-Datei ohne WAL-Beiwerk. Zusätzliche Software braucht es nicht — `better-sqlite3`
-steckt schon in der Installation.
-
-**Automatisch bei jedem Start** — praktisch gerade auf einer VM, die nicht
-durchgehend läuft und deshalb selten oder nie um eine feste Uhrzeit an ist:
-`scripts/backup-to-desktop.sh` bündelt Variante B (WAL-sicheres Online-Backup,
-kein Server-Stopp nötig) in einem Script, das auch die richtige Node-Version
-selbst findet (wie `install.sh`). Per `crontab -e` einmalig eintragen:
-
-```
-@reboot sleep 60 && $HOME/abo-tracker/scripts/backup-to-desktop.sh >> $HOME/abo-tracker/backup.log 2>&1
-```
-
-`@reboot` löst beim Start von Cron aus (also faktisch beim Hochfahren),
-`sleep 60` verzögert um eine Minute, damit die Datenbank sicher da ist, bevor
-gesichert wird. Pfad ggf. anpassen, falls das Projekt woanders liegt. Landet
-unter **`abo-backup`** auf dem Schreibtisch — das Script fragt dafür
-`xdg-user-dir DESKTOP` ab, trifft also auch bei deutscher Locale
-(„Schreibtisch" statt „Desktop") den richtigen, tatsächlich sichtbaren Ordner.
-Eine Datei pro Kalendertag (`abo-tracker-JJJJ-MM-TT.db`), mehrere Starts am
-selben Tag überschreiben dieselbe Datei. Das Script behält automatisch nur
-die **letzten 10** Sicherungen und löscht ältere selbst — nichts, worum man
-sich manuell kümmern muss. Anzahl in `scripts/backup-to-desktop.sh` über die
-Variable `KEEP` einstellbar. Node muss dafür nicht von Hand gesucht werden —
-`backup-to-desktop.sh` löst das wie `install.sh` selbst.
+---
 
 ## Restore
 
-**Bei der Installation:** Eine Erstinstallation fragt, ob Konten und Abos
-aus einer Sicherung wiederhergestellt werden sollen (Vorgabe: nein). Bei „j“
-den Pfad zur Sicherung eingeben, Tab vervollständigt dabei wie gewohnt. Liegt
-an einem der üblichen Orte schon eine, wird die neueste als Vorschlag
-angezeigt und mit Enter übernommen:
+Eine Sicherung zurückspielen („wiederherstellen“) geht auf zwei Arten:
 
-- `abo-tracker-*.db` im Download-Ordner („Sicherung erstellen“ in der App),
-- `abo-backup/abo-tracker-*.db` auf dem Schreibtisch (`backup-to-desktop.sh`),
-- `<Projektordner>-data-backup-*/abo-tracker.db` (`uninstall.sh --keep-data`).
+- **Bei der Installation:** Die Installation fragt, ob du Daten aus einer
+  Sicherung übernehmen willst. Das ist der richtige Weg für einen neuen
+  Rechner oder nach einer Neuinstallation.
+- **In einer bestehenden Installation:** über *Abo-Tracker wiederherstellen*
+  (Windows) bzw. `scripts/restore.sh` (Linux), z. B. wenn versehentlich
+  etwas gelöscht wurde.
 
-Ohne Nachfrage, z.B. für Skripte:
+Wie das im Einzelnen geht, steht in der Anleitung für
+[Windows](windows/README.md#sicherung-zurückspielen) bzw.
+[Linux](LINUX.md#sicherung-zurückspielen). In beiden Fällen gilt:
 
-```bash
-./installscript/install.sh --restore <sicherung>
-```
+- **Die Sicherung wird vorher geprüft.** Ist die Datei keine
+  Abo-Tracker-Datenbank, beschädigt oder stammt sie aus einer neueren
+  Version als der installierten, wird nichts verändert.
+- **Deine bisherigen Daten gehen nicht verloren.** Gibt es schon eine
+  Datenbank, wird sie vorher als `vor-wiederherstellung-<Datum-Uhrzeit>.db`
+  im Ordner `abo-backup` auf dem Desktop bzw. Schreibtisch abgelegt.
+- **Ältere Sicherungen funktionieren.** Eine Sicherung aus einer älteren
+  Version wird beim Einspielen automatisch auf den aktuellen Stand gebracht.
+- **Es kommt alles zurück, auch die Passwörter**, und zwar mit dem Stand zum
+  Zeitpunkt der Sicherung. Wurde seitdem ein Passwort geändert, gilt wieder
+  das alte.
+- **Windows und Linux sind austauschbar.** Eine unter Windows erstellte
+  Sicherung lässt sich unter Linux zurückspielen und umgekehrt.
 
-**In einer bestehenden Installation:**
+---
 
-```bash
-cd ~/abo-tracker
-scripts/restore.sh                  # neueste Sicherung (siehe oben), fragt vorher nach
-scripts/restore.sh <sicherung>      # bestimmte .db-Datei oder Ordner mit abo-tracker.db
-```
+## Update
 
-Das stoppt den Server, legt die bisherige Datenbank als
-`abo-backup/vor-wiederherstellung-<Zeit>.db` auf den Schreibtisch, spielt die
-Sicherung ein, bringt sie per Migration auf den aktuellen Stand und startet
-den Server wieder, falls er lief.
+### Woran erkenne ich ein Update?
 
-In beiden Fällen wird die Sicherung vorher geprüft (SQLite, intakt,
-Abo-Tracker-Datenbank, nicht aus einer neueren App-Version). Scheitert die
-Prüfung, bleibt die bisherige Datenbank unverändert. Eine neben der Sicherung
-liegende `-wal`-Datei (Ordnerkopie aus Variante A) wird mit eingespielt.
+Oben in der App steht neben dem Schriftzug „Abo-Tracker“ die installierte
+Version, z. B. `v1.9.0`. Gibt es eine neuere, erscheint daneben ein Hinweis
+wie **„Update verfügbar: v1.9.1“**. Ein Klick darauf öffnet die Seite dieser
+Version auf GitHub. Dort steht, was sich geändert hat.
 
-Danach einloggen und stichprobenartig prüfen, ob die Abos vollständig sind.
-Beachte: mit der Datenbank kommen auch die **Passwörter vom Zeitpunkt der
-Sicherung** zurück. Wurde seitdem ein Passwort geändert, gilt wieder das alte.
+Die App schaut höchstens einmal pro Stunde nach, ob es eine neue Version
+gibt. Ein frisch erschienenes Update kann also bis zu einer Stunde brauchen,
+bis der Hinweis auftaucht. Ist GitHub gerade nicht erreichbar, erscheint
+einfach kein Hinweis.
 
-Kein Backup mehr, aber die Datenbank ist beschädigt? Dann hilft nur der
-Neuanfang: `data/` löschen und `./installscript/install.sh` erneut ausführen —
-das legt eine leere Datenbank und ein frisches Admin-Konto an.
+### So gehst du vor
 
-## Deinstallation
+1. **Sicherung erstellen** (siehe [oben](#backup)). Ein Update lässt deine
+   Daten zwar in Ruhe, eine frische Sicherung schadet aber nie.
+2. **Update ausführen**, je nach System:
+   - **Windows:** die neue `AboTrackerSetup.exe` herunterladen und starten,
+     siehe [Anleitung für Windows](windows/README.md#update).
+   - **Linux:** den Installationsbefehl erneut ausführen, siehe
+     [Anleitung für Linux](LINUX.md#update).
+3. **Prüfen:** Die App im Browser neu laden. Neben dem Schriftzug steht die
+   neue Versionsnummer, und der Update-Hinweis ist verschwunden.
 
-```bash
-cd ~/abo-tracker
-./installscript/uninstall.sh
-```
+Beim Update bleiben alle Abos, Konten und Passwörter erhalten. Nach
+**Sicherung zurückspielen** wird beim Update **nicht** gefragt: Das gibt es
+nur bei einer Erstinstallation (Linux) bzw. wird mit „Nein“ übersprungen
+(Windows).
 
-Stoppt den Server, entfernt den Autostart-Eintrag und löscht danach den
-kompletten Projektordner samt Datenbank — Abos, Konten und Passwort-Hashes
-eingeschlossen. Fragt vor dem endgültigen Löschen einmal nach. Wer nicht
-gefragt werden will:
-
-```bash
-./installscript/uninstall.sh -y
-```
-
-Um die Datenbank zu behalten statt sie mit zu löschen, z.B. für eine
-spätere Neuinstallation:
-
-```bash
-./installscript/uninstall.sh --keep-data
-```
-
-Das kopiert `data/` vorher nach `<Projektordner>-data-backup-<Datum>` —
-neben den (dann gelöschten) Projektordner, am Standardort also z.B.
-`~/abo-tracker-data-backup-2026-08-04`. Für ein reguläres Backup unabhängig
-von einer Deinstallation siehe [Backup](#backup) oben.
+---
 
 ## Umzug auf einen anderen Rechner
 
-1. Auf dem alten Rechner in der App „Sicherung erstellen“ und die Datei
-   irgendwo auf den neuen Rechner kopieren.
-2. Auf dem neuen Rechner ganz normal installieren (Schnellstart oben), die
-   Frage nach der Sicherung mit „j“ beantworten und den Pfad zur Datei angeben.
-3. Fertig. Die Zugangsdaten sind dieselben wie auf dem alten Rechner.
+Das funktioniert auch von Windows nach Linux und umgekehrt.
 
-## Wenn etwas klemmt
-
-| Symptom | Ursache und Abhilfe |
-| --- | --- |
-| `Kein Node >= 22.18 gefunden` | Verneinte nvm-Installation. Node von <https://nodejs.org> installieren und erneut starten. |
-| `better-sqlite3 lässt sich nicht laden` | Das Script grenzt die Ursache selbst ein. `better-sqlite3` bringt Node-API-Prebuilds mit (`prebuilds/linux-x64.node`, dazu arm64 und musl), Build-Werkzeuge sind also normalerweise nicht nötig. Fehlt für die Plattform eines, nennt das Script beides: `sudo apt install build-essential python3` **und** `npm install-scripts approve better-sqlite3` — seit npm 12 blockiert npm Install-Scripts, solange sie nicht im `allowScripts`-Feld der `package.json` stehen. |
-| `Port 3200 ist von einem fremden Prozess belegt` | Anderer Dienst auf dem Port. Mit `--port 3300` ausweichen. |
-| `Datenbank nicht gefunden` | Der Server wurde aus dem falschen Verzeichnis gestartet. `scripts/start-prod.sh` benutzen. |
-| `kill $(cat .server.pid)` sagt `No such process` | Der Server läuft schon nicht mehr, `.server.pid` war nur veraltet — kein Fehler. `scripts/stop-prod.sh` benutzen, das prüft den tatsächlichen Zustand statt der Datei blind zu vertrauen. |
-| Seite lädt nicht | `tail -20 prod-server.log` zeigt den Grund. |
-| Design-Wahl (hell/dunkel/midnight) merkt sich Firefox nicht über einen Neustart hinweg | Passiert typischerweise beim Zugriff über `localhost` oder eine reine IP-Adresse, wenn in Firefox „Cookies und Website-Daten löschen, wenn Firefox beendet wird" aktiv ist. `install.sh` zeigt am Ende automatisch die passenden zwei Befehle (fester Hostname in `/etc/hosts` + `scripts/firefox-persist-fix.sh <hostname>`), falls noch nicht eingerichtet. |
+1. Auf dem **alten** Rechner in der App **Sicherung erstellen** und die Datei
+   auf den neuen Rechner bringen (USB-Stick, Netzlaufwerk, Cloud …).
+2. Auf dem **neuen** Rechner den Abo-Tracker installieren und bei der Frage
+   nach einer Sicherung **Ja** sagen und die Datei auswählen.
+3. Mit den gewohnten Zugangsdaten anmelden. Fertig.

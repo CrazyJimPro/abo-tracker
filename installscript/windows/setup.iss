@@ -17,11 +17,11 @@
 
 #define MyAppName "Abo-Tracker"
 ; Von aussen überschreibbar: der Release-Workflow gibt die Version des
-; gepushten v*-Tags mit "iscc /DMyAppVersion=1.7.0 ..." herein. Ohne das trug
+; gepushten v*-Tags mit "iscc /DMyAppVersion=1.7.1 ..." herein. Ohne das trug
 ; jede gebaute .exe die hier zuletzt von Hand gepflegte Nummer — ein Release
 ; v1.7.0 hätte sich in "Apps & Features" weiter als 1.6.5 eingetragen.
 #ifndef MyAppVersion
-  #define MyAppVersion "1.7.0"
+  #define MyAppVersion "1.7.1"
 #endif
 #define MyAppPublisher "Abo-Tracker"
 #define MyAppURL "https://github.com/CrazyJimPro/abo-tracker"
@@ -66,6 +66,7 @@ Source: "start-prod.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignorev
 Source: "stop-prod.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
 Source: "open-app.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
 Source: "uninstall.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
+Source: "backup.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
 
 ; "Öffnen" geht über open-app.ps1 statt direkt auf die URL: lief der Server
 ; gerade nicht, landete man vorher auf einer Browser-Fehlerseite ohne jeden
@@ -74,6 +75,7 @@ Source: "uninstall.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreve
 Name: "{group}\Abo-Tracker öffnen"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installscript\windows\open-app.ps1"""
 Name: "{group}\Abo-Tracker starten"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installscript\windows\start-prod.ps1"""
 Name: "{group}\Abo-Tracker stoppen"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installscript\windows\stop-prod.ps1"""
+Name: "{group}\Abo-Tracker sichern"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installscript\windows\backup.ps1"" -ShowResult"
 Name: "{group}\Deinstallieren"; Filename: "{uninstallexe}"
 
 ; "64bit" schaltet für diesen einen Aufruf die WOW64-Dateisystem-Umleitung ab
@@ -94,7 +96,7 @@ Filename: "powershell.exe"; \
 ; Der Aufruf passiert deshalb weiter unten in [Code] per Exec(), wo sich der
 ; Rückgabewert prüfen und die Deinstallation notfalls abbrechen lässt.
 
-; Ohne das kennt Inno Setup nur die 8 .ps1-Dateien aus [Files] — git clone und
+; Ohne das kennt Inno Setup nur die 9 .ps1-Dateien aus [Files] — git clone und
 ; npm install legen tausende weitere Dateien in {app} an (node_modules,
 ; node-runtime, data\, .git, ...), die Inno nie selbst registriert hat. Der
 ; eingebaute Uninstaller versucht zwar am Ende, {app} zu entfernen, scheitert

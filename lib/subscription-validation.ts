@@ -37,6 +37,16 @@ export type SubscriptionFields = {
   introUntil: string | null;
 };
 
+// Echtes Kalenderdatum im Format JJJJ-MM-TT — "2026-02-30" fällt durch, weil
+// Date.UTC den Tag in den März überlaufen ließe.
+export function isValidIsoDate(s: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return false;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const date = new Date(Date.UTC(y, mo - 1, d));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === mo - 1 && date.getUTCDate() === d;
+}
+
 export function validate(fields: SubscriptionFields): string | null {
   if (!fields.name) return "Name ist erforderlich.";
   if (!Number.isFinite(fields.amount) || fields.amount < 0) {
@@ -47,6 +57,12 @@ export function validate(fields: SubscriptionFields): string | null {
   }
   if (!STATUSES.includes(fields.status as SubscriptionStatus)) {
     return "Ungültiger Status.";
+  }
+  if (fields.nextBillingDate !== null && !isValidIsoDate(fields.nextBillingDate)) {
+    return `Nächste Abrechnung "${fields.nextBillingDate}" ist kein gültiges Datum (TT.MM.JJJJ oder JJJJ-MM-TT).`;
+  }
+  if (fields.introUntil !== null && !isValidIsoDate(fields.introUntil)) {
+    return `Aktionspreis gilt bis "${fields.introUntil}" ist kein gültiges Datum (TT.MM.JJJJ oder JJJJ-MM-TT).`;
   }
   if (
     fields.regularAmount !== null &&

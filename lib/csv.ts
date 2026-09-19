@@ -105,6 +105,36 @@ export function encodeSubscriptionsToCsv(rows: ExportRow[]): string {
   return "﻿" + lines.join("\r\n") + "\r\n";
 }
 
+// Excel für Windows speichert "CSV (Trennzeichen-getrennt)" in Windows-1252
+// ohne BOM — auch wenn die Datei als UTF-8 mit BOM geöffnet wurde. Als UTF-8
+// gelesen würden daraus "N�chste Abrechnung" und "J�hrlich": die
+// Spalte fiele ohne Meldung weg, die Zeile flöge als "Ungültiges Intervall"
+// raus. Gültiges UTF-8 ist für Windows-1252-Text mit Umlauten praktisch
+// ausgeschlossen, deshalb reicht der strikte UTF-8-Versuch als Erkennung.
+export function decodeCsvBytes(bytes: ArrayBuffer | Uint8Array): string {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder("windows-1252").decode(bytes);
+  }
+}
+
+// Wir exportieren JJJJ-MM-TT, Excel schreibt beim Speichern aber das
+// Datumsformat der Region zurück: "01.10.2026", je nach Einstellung auch
+// "1.10.26". Beides wird hier nach ISO umgeformt. Alles andere kommt
+// unverändert zurück und wird von validate() als ungültig gemeldet, statt
+// als Text in der Datenbank zu landen, wo Sortierung und Erinnerungen
+// damit nichts anfangen können.
+export function normalizeImportDate(raw: string): string | null {
+  const t = raw.trim();
+  if (!t) return null;
+  const m = /^(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/.exec(t);
+  if (!m) return t;
+  const [, d, mo, y] = m;
+  const year = y.length === 2 ? `20${y}` : y;
+  return `${year}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+}
+
 export type ParsedCsvRow = {
   raw: Record<string, string>;
   // 1-based Excel row number (header = row 1, first data row = row 2), so

@@ -1,12 +1,13 @@
 {
   "name": "abo-tracker",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "private": true,
   "scripts": {
     "dev": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first next dev",
     "build": "cross-env NODE_OPTIONS=--dns-result-order=ipv4first next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --test lib/**/*.test.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "node scripts/seed-categories.ts",
     "bootstrap-admin": "node scripts/bootstrap-admin.ts"

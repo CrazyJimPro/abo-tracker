@@ -124,14 +124,41 @@ erhalten, `bootstrap.ps1` lädt nur den aktuellen App-Code neu.
 ## Backup
 
 Wie unter Linux ist nur **`data\`** zu sichern — darin liegt
-`abo-tracker.db` mit allem, was nicht wiederherstellbar ist. Vor dem
-Kopieren den Server stoppen (WAL-Modus, siehe [Haupt-README](../README.md#backup)):
+`abo-tracker.db` mit allem, was nicht wiederherstellbar ist.
+
+Am einfachsten über den Startmenü-Eintrag **„Abo-Tracker sichern“** oder:
+
+```powershell
+cd $env:LOCALAPPDATA\Abo-Tracker
+installscript\windows\backup.ps1
+```
+
+Das legt per SQLite-Online-Backup `abo-backup\abo-tracker-<Datum>.db` auf dem
+Desktop ab (Pendant zu `scripts/backup-to-desktop.sh`). Der Server darf dabei
+laufen, die Sicherung ist trotz WAL-Modus in sich stimmig. Es bleiben die
+letzten 10 Sicherungen liegen, ältere löscht das Script. Als Desktop gilt der
+Ordner, den Windows dafür eingetragen hat — mit OneDrive-Sicherung also
+`OneDrive\Desktop`, nicht `%USERPROFILE%\Desktop`.
+
+Wer lieber den ganzen Ordner kopiert, muss vorher den Server stoppen, sonst
+fehlt der Kopie womöglich, was noch in `abo-tracker.db-wal` steht:
 
 ```powershell
 installscript\windows\stop-prod.ps1
-Copy-Item data "$env:USERPROFILE\Desktop\abo-tracker-backup-$(Get-Date -Format 'yyyy-MM-dd')" -Recurse
+Copy-Item data "$([Environment]::GetFolderPath('Desktop'))\abo-tracker-backup-$(Get-Date -Format 'yyyy-MM-dd')" -Recurse
 installscript\windows\start-prod.ps1
 ```
+
+**Zurückspielen:** Server stoppen, die Sicherung als `data\abo-tracker.db`
+ablegen und dabei eventuell vorhandene `data\abo-tracker.db-wal` und
+`data\abo-tracker.db-shm` löschen (die gehören zur alten Datenbank), dann
+den Server wieder starten.
+
+**CSV-Export/-Import** (Einstellungen in der App) ist kein Ersatz dafür: Er
+enthält nur die Abos des angemeldeten Kontos, keine Konten, Preishistorie
+oder Benachrichtigungen. Die exportierte Datei öffnet sich direkt in Excel
+und lässt sich auch nach dem Speichern in Excel (Windows-1252, deutsches
+Datumsformat) wieder importieren.
 
 ## Deinstallation
 

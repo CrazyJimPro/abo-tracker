@@ -15,7 +15,14 @@ import {
 } from "@/lib/db/queries";
 import type { BillingInterval, SubscriptionStatus } from "@/lib/db/schema";
 import { CATEGORY_COLORS, validate } from "@/lib/subscription-validation";
-import { billingIntervalFromLabel, parseGermanDecimal, parseSubscriptionsCsv, statusFromLabel } from "@/lib/csv";
+import {
+  billingIntervalFromLabel,
+  decodeCsvBytes,
+  normalizeImportDate,
+  parseGermanDecimal,
+  parseSubscriptionsCsv,
+  statusFromLabel,
+} from "@/lib/csv";
 
 export type ImportResult = {
   inserted: number;
@@ -39,7 +46,8 @@ export async function importSubscriptionsCsv(
     return { result: null, fatalError: "Bitte eine CSV-Datei auswählen." };
   }
 
-  const text = await file.text();
+  // Nicht file.text(): das liest immer als UTF-8, siehe decodeCsvBytes.
+  const text = decodeCsvBytes(await file.arrayBuffer());
   const { rows, parseError } = parseSubscriptionsCsv(text);
   if (parseError) return { result: null, fatalError: parseError };
 
@@ -57,11 +65,11 @@ export async function importSubscriptionsCsv(
       const amount = parseGermanDecimal(raw["Betrag"] ?? "");
       const billingInterval = billingIntervalFromLabel(raw["Intervall"] ?? "") ?? "";
       const status = statusFromLabel(raw["Status"] ?? "") ?? "";
-      const nextBillingDate = (raw["Nächste Abrechnung"] ?? "").trim() || null;
+      const nextBillingDate = normalizeImportDate(raw["Nächste Abrechnung"] ?? "");
       const notes = (raw["Notizen"] ?? "").trim() || null;
       const regularAmountRaw = (raw["Regulärer Preis"] ?? "").trim();
       const regularAmount = regularAmountRaw ? parseGermanDecimal(regularAmountRaw) : null;
-      const introUntil = (raw["Aktionspreis gilt bis"] ?? "").trim() || null;
+      const introUntil = normalizeImportDate(raw["Aktionspreis gilt bis"] ?? "");
 
       const fields = {
         name,

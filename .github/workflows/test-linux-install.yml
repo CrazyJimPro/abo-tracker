@@ -47,6 +47,7 @@ jobs:
 
       - name: Test-Abo anlegen und Sicherung wie die App erstellen
         run: |
+          mkdir -p "$HOME/Downloads"
           node -e '
             const db = new (require("better-sqlite3"))("data/abo-tracker.db");
             const admin = db.prepare("select id from users where role = ?").get("admin");

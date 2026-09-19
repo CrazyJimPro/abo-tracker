@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --test lib/**/*.test.ts",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "drizzle-kit migrate --config drizzle.config.ts",
     "db:seed": "node scripts/seed-categories.ts",
     "bootstrap-admin": "node scripts/bootstrap-admin.ts"
   },

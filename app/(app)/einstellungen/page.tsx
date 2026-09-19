@@ -54,7 +54,7 @@ export default async function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             <Button render={<a href="/api/backup" />} nativeButton={false}>
-              Sicherung herunterladen
+              Sicherung erstellen
             </Button>
             <p className="text-xs text-muted-foreground">
               Landet im Download-Ordner des Browsers. Wiederherstellen unter Windows beim Installieren

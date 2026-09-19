@@ -17,11 +17,11 @@
 
 #define MyAppName "Abo-Tracker"
 ; Von aussen überschreibbar: der Release-Workflow gibt die Version des
-; gepushten v*-Tags mit "iscc /DMyAppVersion=1.8.1 ..." herein. Ohne das trug
+; gepushten v*-Tags mit "iscc /DMyAppVersion=1.8.2 ..." herein. Ohne das trug
 ; jede gebaute .exe die hier zuletzt von Hand gepflegte Nummer — ein Release
 ; v1.7.0 hätte sich in "Apps & Features" weiter als 1.6.5 eingetragen.
 #ifndef MyAppVersion
-  #define MyAppVersion "1.8.1"
+  #define MyAppVersion "1.8.2"
 #endif
 #define MyAppPublisher "Abo-Tracker"
 #define MyAppURL "https://github.com/CrazyJimPro/abo-tracker"
@@ -117,7 +117,7 @@ var
 
 // Neueste abo-tracker-*.db, damit der Normalfall "gerade gesichert, jetzt neu
 // aufgesetzt" ohne Suchen geht. Gesucht wird in <Desktop>\abo-backup
-// (backup.ps1) und im Download-Ordner ("Sicherung herunterladen" in der App),
+// (backup.ps1) und im Download-Ordner ("Sicherung erstellen" in der App),
 // über beide hinweg nach Änderungsdatum — der Browser hängt bei gleichem
 // Namen " (1)" an, der Name taugt dann nicht mehr zum Sortieren.
 // {userdesktop} folgt wie GetFolderPath einer OneDrive-Umleitung.
@@ -165,7 +165,7 @@ begin
   RestoreChoicePage := CreateInputOptionPage(wpSelectDir,
     'Daten übernehmen', 'Soll eine Sicherung eingespielt werden?',
     'Eine Sicherung entsteht in der App unter Einstellungen → "Sicherung ' +
-    'herunterladen" (Download-Ordner), über "Abo-Tracker sichern" im Startmenü ' +
+    'erstellen" (Download-Ordner), über "Abo-Tracker sichern" im Startmenü ' +
     '(Ordner abo-backup auf dem Desktop) oder bei der Deinstallation mit Sicherung. ' +
     'Abos, Konten und Passwörter kommen dann aus der Sicherung.',
     True, False);

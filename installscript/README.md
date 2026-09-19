@@ -139,7 +139,12 @@ nur, wenn du den Datenbankpfad darin geändert hast.
 Die Datenbank läuft im WAL-Modus. Deshalb reicht es **nicht**, die Datei im
 laufenden Betrieb einfach zu kopieren — ein Teil der Änderungen steht dann
 noch in `abo-tracker.db-wal` und die Kopie kann in sich widersprüchlich sein.
-Zwei Wege, die sauber sind:
+Sauber sind diese Wege:
+
+**Am einfachsten — in der App:** Einstellungen → Sicherung → „Sicherung
+herunterladen“ (nur für Admins). Das ist dasselbe Online-Backup wie
+Variante B, landet aber als `abo-tracker-<Datum>.db` im Download-Ordner des
+Browsers, auch von einem anderen Gerät aus.
 
 **Variante A — Server kurz stoppen (ohne Zusatzwerkzeug):**
 

@@ -42,6 +42,28 @@ export default async function SettingsPage() {
           <ImportForm />
         </CardContent>
       </Card>
+
+      {user.role === "admin" && (
+        <Card className="max-w-lg">
+          <CardHeader>
+            <CardTitle className="text-base">Sicherung</CardTitle>
+            <CardDescription>
+              Die komplette Datenbank als Datei: alle Konten mit Passwörtern, Abos, Kategorien und
+              Preishistorie. Anders als der CSV-Export lässt sich damit alles wiederherstellen.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Button render={<a href="/api/backup" />} nativeButton={false}>
+              Sicherung herunterladen
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Landet im Download-Ordner des Browsers. Wiederherstellen unter Windows beim Installieren
+              (Seite „Daten übernehmen“) oder über „Abo-Tracker wiederherstellen“ im Startmenü. Die
+              Datei gut aufbewahren: Wer sie hat, hat alle Daten.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

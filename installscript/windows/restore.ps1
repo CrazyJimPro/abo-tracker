@@ -3,7 +3,7 @@
 Spielt eine Sicherung in eine bestehende Installation zurück — ohne den
 Installer noch einmal laufen zu lassen. Gegenstück zu backup.ps1.
 
-  installscript\windows\restore.ps1                      # neueste Sicherung aus <Desktop>\abo-backup
+  installscript\windows\restore.ps1                      # neueste Sicherung aus <Desktop>\abo-backup oder Downloads
   installscript\windows\restore.ps1 -From <pfad>         # bestimmte .db-Datei oder Ordner mit abo-tracker.db
 
 Ablauf: Server stoppen, bisherige Datenbank nach
@@ -14,7 +14,9 @@ sind danach die aus der Sicherung.
 
 Optionen:
   -From <pfad>   Sicherung (siehe oben). Ohne Angabe die neueste
-                 abo-tracker-*.db aus <Desktop>\abo-backup.
+                 abo-tracker-*.db aus <Desktop>\abo-backup oder dem
+                 Download-Ordner (dorthin lädt "Sicherung herunterladen" in
+                 den Einstellungen der App).
   -Force         Nicht nachfragen.
   -Port <n>      Port des Servers (Standard 3200).
 #>
@@ -45,9 +47,21 @@ $desktop = [Environment]::GetFolderPath("Desktop")
 if (-not $desktop) { $desktop = Join-Path $env:USERPROFILE "Desktop" }
 
 if (-not $From) {
-    $newest = Get-ChildItem -Path (Join-Path $desktop "abo-backup") -Filter "abo-tracker-*.db" -ErrorAction SilentlyContinue |
-        Sort-Object Name -Descending | Select-Object -First 1
-    if (-not $newest) { throw "Keine Sicherung in $desktop\abo-backup gefunden. Mit -From <pfad> angeben." }
+    # Gesucht wird dort, wo Sicherungen entstehen: backup.ps1 legt sie in
+    # <Desktop>\abo-backup ab, "Sicherung herunterladen" in der App im
+    # Download-Ordner. Über beide hinweg zählt das Änderungsdatum, nicht der
+    # Name — der Browser hängt bei gleichem Namen " (1)" an.
+    try {
+        $downloads = (New-Object -ComObject Shell.Application).NameSpace("shell:Downloads").Self.Path
+    } catch {
+        $downloads = $null
+    }
+    if (-not $downloads) { $downloads = Join-Path $env:USERPROFILE "Downloads" }
+    $searched = @((Join-Path $desktop "abo-backup"), $downloads)
+    $newest = $searched |
+        ForEach-Object { Get-ChildItem -Path $_ -Filter "abo-tracker-*.db" -ErrorAction SilentlyContinue } |
+        Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if (-not $newest) { throw "Keine Sicherung gefunden in $($searched -join ' oder '). Mit -From <pfad> angeben." }
     $From = $newest.FullName
 }
 if (-not (Test-Path $From)) { throw "Sicherung nicht gefunden: $From" }

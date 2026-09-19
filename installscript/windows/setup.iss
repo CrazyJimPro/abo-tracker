@@ -17,11 +17,11 @@
 
 #define MyAppName "Abo-Tracker"
 ; Von aussen überschreibbar: der Release-Workflow gibt die Version des
-; gepushten v*-Tags mit "iscc /DMyAppVersion=1.8.0 ..." herein. Ohne das trug
+; gepushten v*-Tags mit "iscc /DMyAppVersion=1.8.1 ..." herein. Ohne das trug
 ; jede gebaute .exe die hier zuletzt von Hand gepflegte Nummer — ein Release
 ; v1.7.0 hätte sich in "Apps & Features" weiter als 1.6.5 eingetragen.
 #ifndef MyAppVersion
-  #define MyAppVersion "1.8.0"
+  #define MyAppVersion "1.8.1"
 #endif
 #define MyAppPublisher "Abo-Tracker"
 #define MyAppURL "https://github.com/CrazyJimPro/abo-tracker"
@@ -115,31 +115,44 @@ var
   RestoreChoicePage: TInputOptionWizardPage;
   RestoreFilePage: TInputFileWizardPage;
 
-// Neueste abo-tracker-*.db aus <Desktop>\abo-backup (von backup.ps1), damit
-// der Normalfall "gerade gesichert, jetzt neu aufgesetzt" ohne Suchen geht.
+// Neueste abo-tracker-*.db, damit der Normalfall "gerade gesichert, jetzt neu
+// aufgesetzt" ohne Suchen geht. Gesucht wird in <Desktop>\abo-backup
+// (backup.ps1) und im Download-Ordner ("Sicherung herunterladen" in der App),
+// über beide hinweg nach Änderungsdatum — der Browser hängt bei gleichem
+// Namen " (1)" an, der Name taugt dann nicht mehr zum Sortieren.
 // {userdesktop} folgt wie GetFolderPath einer OneDrive-Umleitung.
-function FindNewestBackup: string;
 var
-  Dir: string;
+  NewestBackup: string;
+  NewestHigh, NewestLow: Cardinal;
+
+procedure ScanBackups(Dir: string);
+var
   Rec: TFindRec;
-  Newest: string;
 begin
-  Result := '';
-  Newest := '';
-  Dir := ExpandConstant('{userdesktop}\abo-backup');
   if FindFirst(Dir + '\abo-tracker-*.db', Rec) then
   begin
     try
       repeat
-        if CompareText(Rec.Name, Newest) > 0 then
-          Newest := Rec.Name;
+        if (NewestBackup = '') or (Rec.LastWriteTimeHigh > NewestHigh) or
+           ((Rec.LastWriteTimeHigh = NewestHigh) and (Rec.LastWriteTimeLow > NewestLow)) then
+        begin
+          NewestBackup := Dir + '\' + Rec.Name;
+          NewestHigh := Rec.LastWriteTimeHigh;
+          NewestLow := Rec.LastWriteTimeLow;
+        end;
       until not FindNext(Rec);
     finally
       FindClose(Rec);
     end;
   end;
-  if Newest <> '' then
-    Result := Dir + '\' + Newest;
+end;
+
+function FindNewestBackup: string;
+begin
+  NewestBackup := '';
+  ScanBackups(ExpandConstant('{userdesktop}\abo-backup'));
+  ScanBackups(ExpandConstant('{%USERPROFILE}\Downloads'));
+  Result := NewestBackup;
 end;
 
 function RestoreWanted: Boolean;
@@ -151,8 +164,9 @@ procedure InitializeWizard;
 begin
   RestoreChoicePage := CreateInputOptionPage(wpSelectDir,
     'Daten übernehmen', 'Soll eine Sicherung eingespielt werden?',
-    'Eine Sicherung entsteht über "Abo-Tracker sichern" im Startmenü (Ordner ' +
-    'abo-backup auf dem Desktop) oder bei der Deinstallation mit Sicherung. ' +
+    'Eine Sicherung entsteht in der App unter Einstellungen → "Sicherung ' +
+    'herunterladen" (Download-Ordner), über "Abo-Tracker sichern" im Startmenü ' +
+    '(Ordner abo-backup auf dem Desktop) oder bei der Deinstallation mit Sicherung. ' +
     'Abos, Konten und Passwörter kommen dann aus der Sicherung.',
     True, False);
   RestoreChoicePage.Add('Nein, ohne Sicherung weiter (bei einer Aktualisierung bleiben die vorhandenen Daten erhalten)');
@@ -161,7 +175,7 @@ begin
 
   RestoreFilePage := CreateInputFilePage(RestoreChoicePage.ID,
     'Sicherung auswählen', 'Welche Sicherung soll eingespielt werden?',
-    'Eine .db-Datei aus abo-backup, oder bei einer Sicherung aus der ' +
+    'Eine abo-tracker-<Datum>.db aus Downloads oder abo-backup, oder bei einer Sicherung aus der ' +
     'Deinstallation die Datei abo-tracker.db im Ordner abo-tracker-backup-<Datum>.');
   RestoreFilePage.Add('Sicherung:', 'Abo-Tracker-Sicherung (*.db)|*.db|Alle Dateien (*.*)|*.*', '.db');
   RestoreFilePage.Values[0] := FindNewestBackup;

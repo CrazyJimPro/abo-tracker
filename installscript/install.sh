@@ -229,14 +229,31 @@ mkdir -p "$(dirname "$DB_PATH")"
 # Nachfragen nur bei einer Erstinstallation: bei jeder Aktualisierung wäre
 # die Frage lästig, und dort gibt es scripts/restore.sh oder --restore.
 # Vorgabe ist "nein" — auch bei -y wird nichts ungefragt eingespielt.
+#
+# Gefragt wird immer, nicht nur wenn an den üblichen Orten eine Sicherung
+# liegt: wer seine Dateien anderswo ablegt, soll trotzdem hinführen können.
+# Ein Fund dort ist nur der Vorschlag, den Enter übernimmt. read -e schaltet
+# die Tab-Vervollständigung für Pfade ein.
 if [ -z "$RESTORE_FROM" ] && [ ! -f "$DB_PATH" ] && ! $ASSUME_YES && [ -t 0 ]; then
-  FOUND_BACKUP=$(newest_backup "$PROJECT_DIR")
-  if [ -n "$FOUND_BACKUP" ]; then
-    info "Gefundene Sicherung: $FOUND_BACKUP"
-    muted "vom $(date -r "$FOUND_BACKUP" '+%d.%m.%Y %H:%M')"
-    read -r -p "      Konten und Abos daraus übernehmen? [j/N] " answer
-    case "$answer" in [JjYy]*) RESTORE_FROM=$FOUND_BACKUP ;; esac
-  fi
+  read -r -p "      Konten und Abos aus einer Sicherung wiederherstellen? [j/N] " answer
+  case "$answer" in
+    [JjYy]*)
+      FOUND_BACKUP=$(newest_backup "$PROJECT_DIR")
+      if [ -n "$FOUND_BACKUP" ]; then
+        muted "Vorschlag (Enter): $FOUND_BACKUP, vom $(date -r "$FOUND_BACKUP" '+%d.%m.%Y %H:%M')"
+      fi
+      while :; do
+        read -r -e -p "      Pfad zur Sicherung (.db-Datei oder Ordner, leer = abbrechen): " answer
+        [ -n "$answer" ] || answer=$FOUND_BACKUP
+        [ -n "$answer" ] || { info "Keine Sicherung — es geht mit einer leeren Datenbank weiter."; break; }
+        # "~" expandiert die Shell bei einer read-Eingabe nicht von selbst.
+        case "$answer" in "~"|"~/"*) answer="$HOME${answer#\~}" ;; esac
+        if [ -e "$answer" ]; then RESTORE_FROM=$answer; break; fi
+        warn "Nicht gefunden: $answer"
+        FOUND_BACKUP=""
+      done
+      ;;
+  esac
 fi
 
 # Vor den Migrationen, damit eine Sicherung aus einer älteren Version gleich

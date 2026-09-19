@@ -81,6 +81,7 @@ will, gibt beides direkt mit:
 | `--autostart` / `--no-autostart` | Autostart erzwingen bzw. überspringen |
 | `--no-open` | Browser am Ende nicht öffnen |
 | `--no-start` | Nur installieren, Server nicht starten |
+| `--restore <pfad>` | Sicherung einspielen, statt danach zu fragen (siehe [Restore](#restore)) |
 | `-y`, `--yes` | Keine Rückfragen, überall die Vorgabe |
 
 ## Direkt nach der Installation
@@ -196,15 +197,17 @@ Variable `KEEP` einstellbar. Node muss dafür nicht von Hand gesucht werden —
 
 ## Restore
 
-**Bei der Installation:** Findet eine Erstinstallation eine Sicherung, fragt
-sie, ob Konten und Abos daraus übernommen werden sollen (Vorgabe: nein).
-Gesucht wird die neueste von
+**Bei der Installation:** Eine Erstinstallation fragt, ob Konten und Abos
+aus einer Sicherung wiederhergestellt werden sollen (Vorgabe: nein). Bei „j“
+den Pfad zur Sicherung eingeben, Tab vervollständigt dabei wie gewohnt. Liegt
+an einem der üblichen Orte schon eine, wird die neueste als Vorschlag
+angezeigt und mit Enter übernommen:
 
 - `abo-tracker-*.db` im Download-Ordner („Sicherung erstellen“ in der App),
 - `abo-backup/abo-tracker-*.db` auf dem Schreibtisch (`backup-to-desktop.sh`),
 - `<Projektordner>-data-backup-*/abo-tracker.db` (`uninstall.sh --keep-data`).
 
-Eine Sicherung von woanders, oder ohne Nachfrage:
+Ohne Nachfrage, z.B. für Skripte:
 
 ```bash
 ./installscript/install.sh --restore <sicherung>
@@ -266,10 +269,10 @@ von einer Deinstallation siehe [Backup](#backup) oben.
 
 ## Umzug auf einen anderen Rechner
 
-1. Auf dem alten Rechner in der App „Sicherung erstellen“ und die Datei in
-   den Download-Ordner des neuen Rechners legen.
-2. Auf dem neuen Rechner ganz normal installieren (Schnellstart oben) und die
-   Frage nach der gefundenen Sicherung mit „j“ beantworten.
+1. Auf dem alten Rechner in der App „Sicherung erstellen“ und die Datei
+   irgendwo auf den neuen Rechner kopieren.
+2. Auf dem neuen Rechner ganz normal installieren (Schnellstart oben), die
+   Frage nach der Sicherung mit „j“ beantworten und den Pfad zur Datei angeben.
 3. Fertig. Die Zugangsdaten sind dieselben wie auf dem alten Rechner.
 
 ## Wenn etwas klemmt

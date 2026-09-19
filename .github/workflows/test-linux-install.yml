@@ -56,15 +56,23 @@ jobs:
             db.backup(process.argv[1]).then(() => console.log("Sicherung:", process.argv[1]));
           ' "$HOME/Downloads/abo-tracker-2026-01-01.db"
 
-      - name: Frische Installation, Nachfrage mit "j" beantwortet
+      - name: Frische Installation, Sicherung aus eigenem Ordner angegeben
         run: |
+          # Wie im echten Leben: die Sicherung liegt nicht in Downloads,
+          # sondern dort, wo man sie hinlegt, unter eigenem Namen.
+          mkdir -p "$HOME/meine-sicherungen"
+          cp "$HOME/Downloads/abo-tracker-2026-01-01.db" "$HOME/meine-sicherungen/abo.db"
           mkdir "$HOME/frisch"
           git archive HEAD | tar -x -C "$HOME/frisch"
           cd "$HOME/frisch"
           # script stellt ein Terminal bereit — ohne fragt install.sh nicht.
-          printf 'j\n' | script -qec "./installscript/install.sh --no-autostart --no-start" /tmp/frisch.log
+          # Antworten: ja / erst ein Tippfehler / dann der richtige Pfad mit ~.
+          printf 'j\n~/meine-sicherungn/abo.db\n~/meine-sicherungen/abo.db\n' \
+            | script -qec "./installscript/install.sh --no-autostart --no-start" /tmp/frisch.log
           cat /tmp/frisch.log
-          grep -q "Gefundene Sicherung: $HOME/Downloads/abo-tracker-2026-01-01.db" /tmp/frisch.log
+          grep -q "Vorschlag (Enter): $HOME/Downloads/abo-tracker-2026-01-01.db" /tmp/frisch.log
+          grep -q "Nicht gefunden: $HOME/meine-sicherungn/abo.db" /tmp/frisch.log
+          grep -q "Sicherung wird eingespielt: $HOME/meine-sicherungen/abo.db" /tmp/frisch.log
           grep -q "Sicherung eingespielt" /tmp/frisch.log
           grep -q "Admin existiert bereits: admin@test.de" /tmp/frisch.log
           node -e "$Q" data/abo-tracker.db "select name from subscriptions where id = 'restore-test-1'" | tee /tmp/r

@@ -75,7 +75,7 @@ Im **Startmenü** unter *Abo-Tracker* findest du:
 | **Abo-Tracker öffnen** | öffnet die App im Browser (und startet den Server, falls er nicht läuft) |
 | **Abo-Tracker starten** / **stoppen** | Server von Hand starten bzw. anhalten |
 | **Abo-Tracker sichern** | legt eine Sicherung auf dem Desktop ab, siehe unten |
-| **Abo-Tracker wiederherstellen** | spielt eine Sicherung zurück, siehe unten |
+| **Abo-Tracker wiederherstellen** | spielt eine Sicherung zurück, die du in einem Fenster auswählst, siehe unten |
 | **Deinstallieren** | entfernt den Abo-Tracker |
 
 ---
@@ -109,14 +109,22 @@ dafür noch einmal nach.
 
 ### In einer bestehenden Installation
 
-Startmenü → **Abo-Tracker wiederherstellen**. Ein Fenster zeigt, welche
-Sicherung eingespielt wird (die neueste aus dem Download-Ordner oder aus
-`abo-backup` auf dem Desktop), und fragt nach. Mit **j** und Enter
-bestätigen. Der Server wird dabei kurz angehalten und danach wieder
-gestartet.
+1. Startmenü → **Abo-Tracker wiederherstellen**.
+2. Es öffnet sich das gewohnte Windows-Fenster **„Datei öffnen“**. Navigiere
+   zu deiner Sicherung, egal wo sie liegt (USB-Stick, Dokumente, Netzlaufwerk
+   …), wähle sie aus und klicke **Öffnen**. Liegt schon eine im
+   Download-Ordner oder in `abo-backup` auf dem Desktop, ist die neueste davon
+   bereits ausgewählt.
+3. Ein Fenster zeigt Datei, Ordner und Datum der Sicherung und fragt, ob sie
+   eingespielt werden soll. **Ja** klicken.
+4. Nach ein paar Sekunden meldet ein Fenster, wie viele Konten und Abos
+   eingespielt wurden. Der Server wurde dabei kurz angehalten und läuft
+   wieder. Das schwarze Fenster im Hintergrund kannst du danach schließen.
 
-**Liegt die Sicherung woanders?** Dann PowerShell öffnen und den Pfad
-angeben:
+**Abbrechen** bzw. **Nein** ändert nichts. Ist die Datei keine gültige
+Sicherung, sagt ein Fenster, warum, und deine Daten bleiben unverändert.
+
+Für Fortgeschrittene geht es auch ohne Fenster, direkt in PowerShell:
 
 ```powershell
 cd $env:LOCALAPPDATA\Abo-Tracker
@@ -177,7 +185,6 @@ Installieren als Sicherung auswählen.
 | Installation bricht ab | Im Programmordner `%LOCALAPPDATA%\Abo-Tracker` liegt `install.log` mit der kompletten Ausgabe, auch wenn das Fenster schon zu ist. Die Datei hilft bei der Fehlersuche. |
 | Server startet nicht | `prod-server.err.log` im Programmordner nennt den Grund. |
 | Passwort vergessen | Eine andere Person mit Admin-Rechten setzt es im Bereich *Admin* zurück. Das vorläufige Passwort steht absichtlich nirgends gespeichert, auch nicht in `install.log`. |
-| „Keine Sicherung gefunden“ bei *Abo-Tracker wiederherstellen* | Die Sicherung liegt weder im Download-Ordner noch in `abo-backup` auf dem Desktop. Mit `-From` den Pfad angeben, siehe [oben](#in-einer-bestehenden-installation). |
 | Nach einem Windows-Update startet der Server nicht mehr automatisch | Den Installer erneut ausführen (wie beim [Update](#update)), das richtet den Autostart neu ein. |
 | „Port 3200 ist belegt“ | Ein anderes Programm nutzt denselben Port. `installscript\windows\start-prod.ps1 -Port 3300` startet auf einem anderen. |
 | App nur auf diesem Rechner nutzen, keine Firewall-Abfrage | `installscript\windows\start-prod.ps1 -BindHost 127.0.0.1` |
@@ -213,7 +220,7 @@ Installation unter `installscript\windows\` im Programmordner:
 | `install.ps1` | Installation / Update (Optionen: `-Email`, `-RestoreFrom <pfad>`, `-Port`, `-NoStart`, `-NoOpen`, `-NoAutostart`) |
 | `open-app.ps1`, `start-prod.ps1`, `stop-prod.ps1` | Server und Browser |
 | `backup.ps1` | Sicherung nach `Desktop\abo-backup` (`-ShowResult` zeigt ein Ergebnisfenster) |
-| `restore.ps1` | Sicherung zurückspielen (`-From <pfad>`, `-Force` ohne Nachfrage) |
+| `restore.ps1` | Sicherung zurückspielen. Ohne Angabe per Fenster „Datei öffnen“, mit `-From <pfad>` direkt; `-Force` fragt nicht nach und nimmt ohne `-From` die neueste gefundene Sicherung. |
 | `uninstall.ps1` | Hilfsskript des Deinstallers. Nicht zum Deinstallieren direkt aufrufen, es löscht den Ordner nicht. `-KeepData` kopiert `data\` auf den Desktop. |
 
 ### Keine Build-Werkzeuge nötig

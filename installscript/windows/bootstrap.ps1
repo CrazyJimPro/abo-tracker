@@ -23,7 +23,8 @@ param(
     [int]$Port = 3200,
     [switch]$NoAutostart,
     [switch]$NoOpen,
-    [switch]$NoStart
+    [switch]$NoStart,
+    [string]$RestoreFrom = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -136,7 +137,8 @@ try {
 
     & (Join-Path $InstallDir "installscript\windows\install.ps1") `
         -Email $Email -Port $Port `
-        -NoAutostart:$NoAutostart -NoOpen:$NoOpen -NoStart:$NoStart
+        -NoAutostart:$NoAutostart -NoOpen:$NoOpen -NoStart:$NoStart `
+        -RestoreFrom $RestoreFrom
 } catch {
     Write-Host "FEHLER: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host $_.ScriptStackTrace

@@ -149,10 +149,30 @@ Copy-Item data "$([Environment]::GetFolderPath('Desktop'))\abo-tracker-backup-$(
 installscript\windows\start-prod.ps1
 ```
 
-**Zurückspielen:** Server stoppen, die Sicherung als `data\abo-tracker.db`
-ablegen und dabei eventuell vorhandene `data\abo-tracker.db-wal` und
-`data\abo-tracker.db-shm` löschen (die gehören zur alten Datenbank), dann
-den Server wieder starten.
+### Wiederherstellen
+
+**Bei der Installation:** Der Installer fragt auf der Seite „Daten
+übernehmen“, ob eine Sicherung eingespielt werden soll, und schlägt die
+neueste aus `abo-backup` auf dem Desktop vor. Genauso geht die
+`abo-tracker.db` aus einem Ordner `abo-tracker-backup-<Datum>`, den die
+Deinstallation angelegt hat. Konten und Passwörter kommen dann aus der
+Sicherung, die Frage nach der Admin-E-Mail entfällt.
+
+**In einer bestehenden Installation:** Startmenü-Eintrag **„Abo-Tracker
+wiederherstellen“** (nimmt die neueste Sicherung und fragt vorher nach) oder:
+
+```powershell
+cd $env:LOCALAPPDATA\Abo-Tracker
+installscript\windows\restore.ps1                  # neueste aus abo-backup
+installscript\windows\restore.ps1 -From <pfad>     # bestimmte .db oder Ordner
+```
+
+In beiden Fällen wird die Sicherung vorher geprüft (SQLite, intakt,
+Abo-Tracker-Datenbank, nicht aus einer neueren App-Version). Eine schon
+vorhandene Datenbank landet vorher als
+`abo-backup\vor-wiederherstellung-<Zeit>.db` auf dem Desktop, danach bringen
+die Migrationen eine ältere Sicherung auf den aktuellen Stand. Scheitert die
+Prüfung, bleibt die bisherige Datenbank unverändert.
 
 **CSV-Export/-Import** (Einstellungen in der App) ist kein Ersatz dafür: Er
 enthält nur die Abos des angemeldeten Kontos, keine Konten, Preishistorie

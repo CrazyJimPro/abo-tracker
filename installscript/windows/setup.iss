@@ -17,11 +17,11 @@
 
 #define MyAppName "Abo-Tracker"
 ; Von aussen überschreibbar: der Release-Workflow gibt die Version des
-; gepushten v*-Tags mit "iscc /DMyAppVersion=1.7.1 ..." herein. Ohne das trug
+; gepushten v*-Tags mit "iscc /DMyAppVersion=1.8.0 ..." herein. Ohne das trug
 ; jede gebaute .exe die hier zuletzt von Hand gepflegte Nummer — ein Release
 ; v1.7.0 hätte sich in "Apps & Features" weiter als 1.6.5 eingetragen.
 #ifndef MyAppVersion
-  #define MyAppVersion "1.7.1"
+  #define MyAppVersion "1.8.0"
 #endif
 #define MyAppPublisher "Abo-Tracker"
 #define MyAppURL "https://github.com/CrazyJimPro/abo-tracker"
@@ -67,6 +67,7 @@ Source: "stop-prod.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreve
 Source: "open-app.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
 Source: "uninstall.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
 Source: "backup.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
+Source: "restore.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion
 
 ; "Öffnen" geht über open-app.ps1 statt direkt auf die URL: lief der Server
 ; gerade nicht, landete man vorher auf einer Browser-Fehlerseite ohne jeden
@@ -76,6 +77,7 @@ Name: "{group}\Abo-Tracker öffnen"; Filename: "powershell.exe"; Parameters: "-N
 Name: "{group}\Abo-Tracker starten"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installscript\windows\start-prod.ps1"""
 Name: "{group}\Abo-Tracker stoppen"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installscript\windows\stop-prod.ps1"""
 Name: "{group}\Abo-Tracker sichern"; Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File ""{app}\installscript\windows\backup.ps1"" -ShowResult"
+Name: "{group}\Abo-Tracker wiederherstellen"; Filename: "powershell.exe"; Parameters: "-NoProfile -NoExit -ExecutionPolicy Bypass -File ""{app}\installscript\windows\restore.ps1"""
 Name: "{group}\Deinstallieren"; Filename: "{uninstallexe}"
 
 ; "64bit" schaltet für diesen einen Aufruf die WOW64-Dateisystem-Umleitung ab
@@ -86,7 +88,7 @@ Name: "{group}\Deinstallieren"; Filename: "{uninstallexe}"
 ; später vom Explorer (immer 64-Bit) gestartet, nicht von Setup.exe.
 [Run]
 Filename: "powershell.exe"; \
-    Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installscript\windows\bootstrap.ps1"" -InstallDir ""{app}"" -Email ""{code:GetAdminEmail}"""; \
+    Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\installscript\windows\bootstrap.ps1"" -InstallDir ""{app}"" -Email ""{code:GetAdminEmail}""{code:GetRestoreParam}"; \
     StatusMsg: "Abo-Tracker wird eingerichtet (Node.js, Abhängigkeiten, Datenbank) — das kann einige Minuten dauern …"; \
     Flags: runascurrentuser waituntilterminated 64bit
 
@@ -96,7 +98,7 @@ Filename: "powershell.exe"; \
 ; Der Aufruf passiert deshalb weiter unten in [Code] per Exec(), wo sich der
 ; Rückgabewert prüfen und die Deinstallation notfalls abbrechen lässt.
 
-; Ohne das kennt Inno Setup nur die 9 .ps1-Dateien aus [Files] — git clone und
+; Ohne das kennt Inno Setup nur die 10 .ps1-Dateien aus [Files] — git clone und
 ; npm install legen tausende weitere Dateien in {app} an (node_modules,
 ; node-runtime, data\, .git, ...), die Inno nie selbst registriert hat. Der
 ; eingebaute Uninstaller versucht zwar am Ende, {app} zu entfernen, scheitert
@@ -110,10 +112,61 @@ Type: filesandordirs; Name: "{app}"
 [Code]
 var
   AdminEmailPage: TInputQueryWizardPage;
+  RestoreChoicePage: TInputOptionWizardPage;
+  RestoreFilePage: TInputFileWizardPage;
+
+// Neueste abo-tracker-*.db aus <Desktop>\abo-backup (von backup.ps1), damit
+// der Normalfall "gerade gesichert, jetzt neu aufgesetzt" ohne Suchen geht.
+// {userdesktop} folgt wie GetFolderPath einer OneDrive-Umleitung.
+function FindNewestBackup: string;
+var
+  Dir: string;
+  Rec: TFindRec;
+  Newest: string;
+begin
+  Result := '';
+  Newest := '';
+  Dir := ExpandConstant('{userdesktop}\abo-backup');
+  if FindFirst(Dir + '\abo-tracker-*.db', Rec) then
+  begin
+    try
+      repeat
+        if CompareText(Rec.Name, Newest) > 0 then
+          Newest := Rec.Name;
+      until not FindNext(Rec);
+    finally
+      FindClose(Rec);
+    end;
+  end;
+  if Newest <> '' then
+    Result := Dir + '\' + Newest;
+end;
+
+function RestoreWanted: Boolean;
+begin
+  Result := RestoreChoicePage.SelectedValueIndex = 1;
+end;
 
 procedure InitializeWizard;
 begin
-  AdminEmailPage := CreateInputQueryPage(wpSelectDir,
+  RestoreChoicePage := CreateInputOptionPage(wpSelectDir,
+    'Daten übernehmen', 'Soll eine Sicherung eingespielt werden?',
+    'Eine Sicherung entsteht über "Abo-Tracker sichern" im Startmenü (Ordner ' +
+    'abo-backup auf dem Desktop) oder bei der Deinstallation mit Sicherung. ' +
+    'Abos, Konten und Passwörter kommen dann aus der Sicherung.',
+    True, False);
+  RestoreChoicePage.Add('Nein, ohne Sicherung weiter (bei einer Aktualisierung bleiben die vorhandenen Daten erhalten)');
+  RestoreChoicePage.Add('Ja, Daten aus einer Sicherung übernehmen');
+  RestoreChoicePage.SelectedValueIndex := 0;
+
+  RestoreFilePage := CreateInputFilePage(RestoreChoicePage.ID,
+    'Sicherung auswählen', 'Welche Sicherung soll eingespielt werden?',
+    'Eine .db-Datei aus abo-backup, oder bei einer Sicherung aus der ' +
+    'Deinstallation die Datei abo-tracker.db im Ordner abo-tracker-backup-<Datum>.');
+  RestoreFilePage.Add('Sicherung:', 'Abo-Tracker-Sicherung (*.db)|*.db|Alle Dateien (*.*)|*.*', '.db');
+  RestoreFilePage.Values[0] := FindNewestBackup;
+
+  AdminEmailPage := CreateInputQueryPage(RestoreFilePage.ID,
     'Admin-Zugang', 'E-Mail-Adresse für den Admin-Account',
     'Wird nur beim allerersten Setup verwendet, um den Admin-Account anzulegen. ' +
     'Bei einer Aktualisierung einer bestehenden Installation bleibt sie unbenutzt.');
@@ -133,14 +186,47 @@ begin
   Result := FileExists(ExpandConstant('{app}\data\abo-tracker.db'));
 end;
 
+// Leer oder ' -RestoreFrom "<pfad>"' — als Ganzes statt nur des Pfads, weil
+// ein leeres "" hinter -File bei Windows PowerShell 5.1 nicht verlässlich als
+// leerer String ankommt.
+function GetRestoreParam(Param: string): string;
+begin
+  Result := '';
+  if RestoreWanted then
+    Result := ' -RestoreFrom "' + RestoreFilePage.Values[0] + '"';
+end;
+
+// Beim Einspielen kommt der Admin-Account aus der Sicherung, die E-Mail-Seite
+// hätte dann genauso wenig Wirkung wie beim Aktualisieren.
 function ShouldSkipPage(PageID: Integer): Boolean;
 begin
-  Result := (PageID = AdminEmailPage.ID) and IsExistingInstallation;
+  Result := False;
+  if PageID = RestoreFilePage.ID then
+    Result := not RestoreWanted
+  else if PageID = AdminEmailPage.ID then
+    Result := IsExistingInstallation or RestoreWanted;
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
   Result := True;
+  if CurPageID = RestoreFilePage.ID then
+  begin
+    if not FileExists(RestoreFilePage.Values[0]) then
+    begin
+      MsgBox('Die ausgewählte Sicherung gibt es nicht. Bitte eine vorhandene .db-Datei auswählen.', mbError, MB_OK);
+      Result := False;
+    end
+    else if IsExistingInstallation then
+    begin
+      Result := MsgBox(
+        'In ' + ExpandConstant('{app}') + ' gibt es schon eine Datenbank.' + #13#10 + #13#10 +
+        'Sie wird durch die Sicherung ersetzt. Vorher wird sie als ' +
+        'vor-wiederherstellung-<Zeit>.db in abo-backup auf dem Desktop abgelegt.' + #13#10 + #13#10 +
+        'Fortfahren?',
+        mbConfirmation, MB_YESNO) = IDYES;
+    end;
+  end;
   if CurPageID = AdminEmailPage.ID then
   begin
     if (Pos('@', AdminEmailPage.Values[0]) = 0) then
@@ -183,10 +269,41 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   CredFile: string;
+  ResultFile: string;
   Lines: TArrayOfString;
+  Summary: string;
 begin
   if CurStep = ssPostInstall then
   begin
+    // install.ps1 schreibt .restore-result.txt nur nach erfolgreichem
+    // Einspielen (Inhalt: "RESTORED users=<n> subscriptions=<n>").
+    if RestoreWanted then
+    begin
+      ResultFile := ExpandConstant('{app}\.restore-result.txt');
+      if FileExists(ResultFile) then
+      begin
+        Summary := '';
+        if LoadStringsFromFile(ResultFile, Lines) and (GetArrayLength(Lines) >= 1) then
+        begin
+          Summary := Lines[0];
+          StringChangeEx(Summary, 'RESTORED users=', 'Konten: ', True);
+          StringChangeEx(Summary, ' subscriptions=', ', Abos: ', True);
+        end;
+        MsgBox(
+          'Die Sicherung wurde eingespielt.' + #13#10 + #13#10 +
+          Summary + #13#10 + #13#10 +
+          'Anmelden mit den Zugangsdaten, die zum Zeitpunkt der Sicherung galten.',
+          mbInformation, MB_OK);
+        DeleteFile(ResultFile);
+      end
+      else
+        MsgBox(
+          'Die Sicherung konnte nicht eingespielt werden.' + #13#10 + #13#10 +
+          'Details stehen in ' + ExpandConstant('{app}\install.log') + '.' + #13#10 +
+          'Eine schon vorhandene Datenbank ist unverändert geblieben.',
+          mbError, MB_OK);
+    end;
+
     CredFile := ExpandConstant('{app}\.admin-credentials.txt');
     if FileExists(CredFile) then
     begin

@@ -11,6 +11,14 @@ Installer (setup.iss) bzw. dessen [Run]-Schritt.
 
 Das Script ist idempotent: ein zweiter Lauf aktualisiert die Installation,
 ohne vorhandene Daten (Datenbank, Accounts, Passwörter) anzufassen.
+
+-RestoreFrom <pfad>  Vor den Migrationen eine Sicherung als Datenbank
+                     einspielen: eine .db-Datei (backup.ps1) oder ein Ordner
+                     mit abo-tracker.db (Deinstallation mit Sicherung). Eine
+                     schon vorhandene Datenbank wird vorher nach
+                     <Desktop>\abo-backup\vor-wiederherstellung-<Zeit>.db
+                     gesichert. Die Konten kommen aus der Sicherung, -Email
+                     bleibt dann unbenutzt.
 #>
 
 [CmdletBinding()]
@@ -19,7 +27,8 @@ param(
     [int]$Port = 3200,
     [switch]$NoAutostart,
     [switch]$NoOpen,
-    [switch]$NoStart
+    [switch]$NoStart,
+    [string]$RestoreFrom = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -370,6 +379,27 @@ try {
     # Wert wiederhergestellt, damit der Server nicht damit startet.
     $prevNodeOptions = $env:NODE_OPTIONS
     $env:NODE_OPTIONS = ("$prevNodeOptions --disable-warning=MODULE_TYPELESS_PACKAGE_JSON").Trim()
+
+    # Vor den Migrationen, damit eine Sicherung aus einer älteren Version
+    # gleich auf das aktuelle Schema gebracht wird. Der Server ist hier schon
+    # gestoppt (Stop-OurServer vor npm). Die Sicherheitskopie heißt bewusst
+    # nicht abo-tracker-*.db, sonst fiele sie backup.ps1s Aufräumen zum Opfer.
+    if ($RestoreFrom) {
+        Write-Note "Sicherung wird eingespielt: $RestoreFrom"
+        $desktop = [Environment]::GetFolderPath("Desktop")
+        if (-not $desktop) { $desktop = Join-Path $env:USERPROFILE "Desktop" }
+        $safetyCopy = Join-Path $desktop "abo-backup\vor-wiederherstellung-$(Get-Date -Format 'yyyy-MM-dd-HHmmss').db"
+        Remove-Item (Join-Path $ProjectDir ".restore-result.txt") -Force -ErrorAction SilentlyContinue
+        $restoreOutput = & $Node (Join-Path $ProjectDir "scripts\restore-db.ts") $RestoreFrom $dbPath $safetyCopy
+        $restoreOutput | ForEach-Object { Write-Note $_ }
+        if ($LASTEXITCODE -ne 0) { throw "Wiederherstellung fehlgeschlagen — die bisherige Datenbank ist unverändert." }
+        Write-Ok "Sicherung eingespielt"
+        # setup.iss meldet das Ergebnis nach dem Schließen dieses Fensters in
+        # einem Dialog und löscht die Datei danach. Fehlt sie, ist das
+        # Einspielen gescheitert.
+        $restoredLine = $restoreOutput | Where-Object { $_ -match '^RESTORED ' } | Select-Object -Last 1
+        Set-Content -Path (Join-Path $ProjectDir ".restore-result.txt") -Encoding utf8 -Value $restoredLine
+    }
 
     & $Npm run db:migrate
     if ($LASTEXITCODE -ne 0) { throw "Migration fehlgeschlagen." }

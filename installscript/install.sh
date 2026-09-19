@@ -251,7 +251,7 @@ if [ -n "$RESTORE_FROM" ]; then
   RESTORE_OUTPUT=$("$NODE" $NODE_TS_FLAGS scripts/restore-db.ts "$RESTORE_FROM" "$DB_PATH" "$(safety_copy_path)") \
     || die "Wiederherstellung fehlgeschlagen — eine vorhandene Datenbank ist unverändert."
   printf '%s\n' "$RESTORE_OUTPUT" | grep -v '^RESTORED ' | sed 's/^/      /' || true
-  RESTORED=$(printf '%s\n' "$RESTORE_OUTPUT" | sed -n 's/^RESTORED users=\([0-9]*\) subscriptions=\([0-9]*\)$/\1 Konto\/Konten, \2 Abos/p')
+  RESTORED=$(printf '%s\n' "$RESTORE_OUTPUT" | sed -n 's/^RESTORED users=\([0-9]*\) subscriptions=\([0-9]*\)$/Konten: \1, Abos: \2/p')
   ok "Sicherung eingespielt ($RESTORED)"
 fi
 

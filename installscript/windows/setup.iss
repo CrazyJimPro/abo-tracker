@@ -133,12 +133,12 @@ begin
   begin
     try
       repeat
-        if (NewestBackup = '') or (Rec.LastWriteTimeHigh > NewestHigh) or
-           ((Rec.LastWriteTimeHigh = NewestHigh) and (Rec.LastWriteTimeLow > NewestLow)) then
+        if (NewestBackup = '') or (Rec.LastWriteTime.dwHighDateTime > NewestHigh) or
+           ((Rec.LastWriteTime.dwHighDateTime = NewestHigh) and (Rec.LastWriteTime.dwLowDateTime > NewestLow)) then
         begin
           NewestBackup := Dir + '\' + Rec.Name;
-          NewestHigh := Rec.LastWriteTimeHigh;
-          NewestLow := Rec.LastWriteTimeLow;
+          NewestHigh := Rec.LastWriteTime.dwHighDateTime;
+          NewestLow := Rec.LastWriteTime.dwLowDateTime;
         end;
       until not FindNext(Rec);
     finally

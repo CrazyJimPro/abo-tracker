@@ -18,6 +18,11 @@
 #   --no-autostart      Autostart nicht anlegen, nicht nachfragen
 #   --no-open           Browser am Ende nicht öffnen
 #   --no-start          Nur installieren, Server nicht starten
+#   --restore <pfad>    Vor den Migrationen eine Sicherung einspielen (.db-Datei
+#                       oder Ordner mit abo-tracker.db). Konten und Passwörter
+#                       kommen dann aus der Sicherung, --email bleibt unbenutzt.
+#                       Ohne die Option fragt eine Erstinstallation nach, wenn
+#                       sie eine Sicherung findet (siehe scripts/find-backup.sh).
 #   -y, --yes           Keine Rückfragen, überall die Vorgabe verwenden
 #
 set -euo pipefail
@@ -35,6 +40,8 @@ cd "$PROJECT_DIR"
 
 # shellcheck source=scripts/find-node.sh
 . "$SCRIPT_DIR/find-node.sh"
+# shellcheck source=scripts/find-backup.sh
+. "$SCRIPT_DIR/find-backup.sh"
 
 # Native TypeScript-Ausführung (scripts/*.ts laufen ohne tsx) ist ab 22.18
 # standardmäßig aktiv; Next.js 16 verlangt ohnehin >= 20.
@@ -48,6 +55,7 @@ ASSUME_YES=false
 OPEN_BROWSER=true
 START_SERVER=true
 AUTOSTART=ask
+RESTORE_FROM=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -57,6 +65,7 @@ while [ $# -gt 0 ]; do
     --no-autostart) AUTOSTART=no; shift ;;
     --no-open) OPEN_BROWSER=false; shift ;;
     --no-start) START_SERVER=false; OPEN_BROWSER=false; shift ;;
+    --restore) RESTORE_FROM=${2:?--restore braucht einen Pfad}; shift 2 ;;
     -y|--yes) ASSUME_YES=true; shift ;;
     -h|--help) awk '/^#!/ { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"; exit 0 ;;
     *) echo "Unbekannte Option: $1  (--help für die Übersicht)" >&2; exit 1 ;;
@@ -139,22 +148,26 @@ muted "better-sqlite3 nutzt ein vorkompiliertes Binary, es wird nichts kompilier
 # drizzle-kit und die Typen werden aber für Migration und Build gebraucht.
 unset NODE_ENV || true
 
+# --ignore-scripts: keine Abhängigkeit braucht ihr Install-Script (gemessen:
+# npm ci und npm run build laufen mit allen blockiert, siehe allowScripts in
+# package.json). allowScripts allein reicht nicht — das versteht erst npm 12.
+# npm 10 (bei Node 22) startete für better-sqlite3 trotzdem das implizite
+# "node-gyp rebuild", weil package-lock.json hasInstallScript: true trägt. Das
+# baut bei vorhandenem Prebuild zwar nichts, braucht aber make und scheiterte
+# so auf jedem Rechner ohne build-essential.
 if [ -f package-lock.json ]; then
-  npm ci --no-audit --no-fund || {
+  npm ci --no-audit --no-fund --ignore-scripts || {
     warn "npm ci fehlgeschlagen, versuche npm install …"
-    npm install --no-audit --no-fund
+    npm install --no-audit --no-fund --ignore-scripts
   }
 else
-  npm install --no-audit --no-fund
+  npm install --no-audit --no-fund --ignore-scripts
 fi
 
-# better-sqlite3 ist nativ. Seit npm 12 blockiert npm die Install-Scripts von
-# Abhängigkeiten, solange sie nicht im allowScripts-Feld der package.json
-# stehen — better-sqlite3 steht dort bewusst auf false, weil es Node-API-
-# Prebuilds mitliefert (prebuilds/linux-x64.node, dazu arm64 und musl) und sein
-# node-gyp-Lauf bei vorhandenem Prebuild ohnehin nichts produziert. Scheitert
-# dieser Ladetest, ist die Ursache also fast nie ein fehlender Compiler —
-# frühere Fassungen schickten den Nutzer genau dorthin.
+# better-sqlite3 ist nativ, liefert aber Node-API-Prebuilds mit
+# (prebuilds/linux-x64.node, dazu arm64 und musl) — kompiliert wird nichts.
+# Scheitert dieser Ladetest, ist die Ursache also fast nie ein fehlender
+# Compiler — frühere Fassungen schickten den Nutzer genau dorthin.
 "$NODE" -e 'new (require("better-sqlite3"))(":memory:").close()' 2>/dev/null || {
   warn "better-sqlite3 lässt sich nicht laden."
 
@@ -171,7 +184,7 @@ fi
       info "Für diese Plattform liefert better-sqlite3 kein vorkompiliertes Binary mit."
       info "Dann muss es kompiliert werden, und dafür braucht es beides:"
       info "  1. Build-Werkzeuge:  sudo apt install build-essential python3"
-      info "  2. Freigabe des Install-Scripts:  npm install-scripts approve better-sqlite3"
+      info "  2. Danach kompilieren:  npm rebuild better-sqlite3"
       ;;
     1)
       info "Ein passendes Prebuild ist vorhanden, lädt aber nicht — node_modules ist vermutlich beschädigt."
@@ -212,6 +225,35 @@ muted "Datenbank: $DB_PATH"
 step "Datenbank anlegen / aktualisieren"
 
 mkdir -p "$(dirname "$DB_PATH")"
+
+# Nachfragen nur bei einer Erstinstallation: bei jeder Aktualisierung wäre
+# die Frage lästig, und dort gibt es scripts/restore.sh oder --restore.
+# Vorgabe ist "nein" — auch bei -y wird nichts ungefragt eingespielt.
+if [ -z "$RESTORE_FROM" ] && [ ! -f "$DB_PATH" ] && ! $ASSUME_YES && [ -t 0 ]; then
+  FOUND_BACKUP=$(newest_backup "$PROJECT_DIR")
+  if [ -n "$FOUND_BACKUP" ]; then
+    info "Gefundene Sicherung: $FOUND_BACKUP"
+    muted "vom $(date -r "$FOUND_BACKUP" '+%d.%m.%Y %H:%M')"
+    read -r -p "      Konten und Abos daraus übernehmen? [j/N] " answer
+    case "$answer" in [JjYy]*) RESTORE_FROM=$FOUND_BACKUP ;; esac
+  fi
+fi
+
+# Vor den Migrationen, damit eine Sicherung aus einer älteren Version gleich
+# auf das aktuelle Schema gebracht wird.
+if [ -n "$RESTORE_FROM" ]; then
+  # Bei einer Aktualisierung mit --restore läuft der Server womöglich noch
+  # und hielte die alte Datenbank offen. stop-prod.sh fasst nur einen Server
+  # aus diesem Verzeichnis an; scheitert es an einem fremden Prozess auf dem
+  # Port, meldet das der Build-Schritt weiter unten ohnehin.
+  PORT="$PORT" "$SCRIPT_DIR/stop-prod.sh" >/dev/null 2>&1 || true
+  info "Sicherung wird eingespielt: $RESTORE_FROM"
+  RESTORE_OUTPUT=$("$NODE" $NODE_TS_FLAGS scripts/restore-db.ts "$RESTORE_FROM" "$DB_PATH" "$(safety_copy_path)") \
+    || die "Wiederherstellung fehlgeschlagen — eine vorhandene Datenbank ist unverändert."
+  printf '%s\n' "$RESTORE_OUTPUT" | grep -v '^RESTORED ' | sed 's/^/      /' || true
+  RESTORED=$(printf '%s\n' "$RESTORE_OUTPUT" | sed -n 's/^RESTORED users=\([0-9]*\) subscriptions=\([0-9]*\)$/\1 Konto\/Konten, \2 Abos/p')
+  ok "Sicherung eingespielt ($RESTORED)"
+fi
 
 # Ausgabe nur im Fehlerfall zeigen — drizzle-kit schreibt sonst Spinner-
 # Steuerzeichen mitten in die Schritt-Ausgabe.

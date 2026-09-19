@@ -1,0 +1,104 @@
+name: Linux-Installation testen
+
+# Spielt die Linux-Installation samt Wiederherstellung auf einem frischen
+# Ubuntu durch — auf dem Entwicklungsrechner geht das nicht verlässlich (WSL1
+# dort zeigte nach einem rename zwei Dateien gleichen Namens).
+#
+# Absichtlich mit Node 22 (npm 10) und ohne make: genau die Kombination, in
+# der npm ohne --ignore-scripts für better-sqlite3 "node-gyp rebuild" startete
+# und die Installation abbrach.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - "installscript/*.sh"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - "drizzle/**"
+      - ".github/workflows/test-linux-install.yml"
+
+jobs:
+  install-restore:
+    runs-on: ubuntu-latest
+    env:
+      # Hilfsfunktionen für die Prüfungen unten: Zeilen zählen bzw. Name des
+      # Test-Abos, jeweils in einer bestimmten Datenbank.
+      Q: |
+        const db = new (require("better-sqlite3"))(process.argv[1], { readonly: true });
+        const q = process.argv[2];
+        console.log(JSON.stringify(db.prepare(q).all()));
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build-Werkzeuge verstecken
+        run: |
+          sudo mv /usr/bin/make /usr/bin/make.hidden
+          ! command -v make
+
+      - name: Erstinstallation (ohne Rückfragen)
+        run: ./installscript/install.sh --email admin@test.de -y --no-autostart --no-start
+
+      - name: Test-Abo anlegen und Sicherung wie die App erstellen
+        run: |
+          node -e '
+            const db = new (require("better-sqlite3"))("data/abo-tracker.db");
+            const admin = db.prepare("select id from users where role = ?").get("admin");
+            db.prepare("insert into subscriptions (id, owner_id, name, amount) values (?, ?, ?, ?)")
+              .run("restore-test-1", admin.id, "Wiederherstellungstest Größe", 9.99);
+            db.backup(process.argv[1]).then(() => console.log("Sicherung:", process.argv[1]));
+          ' "$HOME/Downloads/abo-tracker-2026-01-01.db"
+
+      - name: Frische Installation, Nachfrage mit "j" beantwortet
+        run: |
+          mkdir "$HOME/frisch"
+          git archive HEAD | tar -x -C "$HOME/frisch"
+          cd "$HOME/frisch"
+          # script stellt ein Terminal bereit — ohne fragt install.sh nicht.
+          printf 'j\n' | script -qec "./installscript/install.sh --no-autostart --no-start" /tmp/frisch.log
+          cat /tmp/frisch.log
+          grep -q "Gefundene Sicherung: $HOME/Downloads/abo-tracker-2026-01-01.db" /tmp/frisch.log
+          grep -q "Sicherung eingespielt" /tmp/frisch.log
+          grep -q "Admin existiert bereits: admin@test.de" /tmp/frisch.log
+          node -e "$Q" data/abo-tracker.db "select name from subscriptions where id = 'restore-test-1'" | tee /tmp/r
+          grep -q "Wiederherstellungstest Größe" /tmp/r
+
+      - name: restore.sh bei laufendem Server
+        run: |
+          cd "$HOME/frisch"
+          PORT=3200 setsid scripts/start-prod.sh </dev/null >/dev/null 2>&1 &
+          for _ in $(seq 60); do curl -fs -o /dev/null http://localhost:3200/login && break; sleep 1; done
+          curl -fs -o /dev/null http://localhost:3200/login
+
+          # Nach der Sicherung geändert — muss durch das Zurückspielen
+          # verschwinden, aber in der Sicherheitskopie stehen.
+          node -e '
+            const db = new (require("better-sqlite3"))("data/abo-tracker.db");
+            db.prepare("update subscriptions set name = ? where id = ?").run("Nach der Sicherung", "restore-test-1");
+          '
+          scripts/restore.sh -y "$HOME/Downloads/abo-tracker-2026-01-01.db" | tee /tmp/restore.log
+          grep -q "Server gestoppt" /tmp/restore.log
+          grep -q "Wiederherstellung abgeschlossen" /tmp/restore.log
+
+          node -e "$Q" data/abo-tracker.db "select name from subscriptions where id = 'restore-test-1'" | tee /tmp/r
+          grep -q "Wiederherstellungstest Größe" /tmp/r
+          SAFETY=$(ls "$HOME"/Desktop/abo-backup/vor-wiederherstellung-*.db)
+          node -e "$Q" "$SAFETY" "select name from subscriptions where id = 'restore-test-1'" | tee /tmp/r
+          grep -q "Nach der Sicherung" /tmp/r
+
+          for _ in $(seq 60); do curl -fs -o /dev/null http://localhost:3200/login && break; sleep 1; done
+          curl -fs -o /dev/null http://localhost:3200/login && echo "Server läuft wieder."
+
+      - name: Ungültige Sicherung lässt die Datenbank unverändert
+        run: |
+          cd "$HOME/frisch"
+          echo "keine datenbank" > /tmp/kaputt.db
+          if scripts/restore.sh -y /tmp/kaputt.db; then echo "hätte scheitern müssen"; exit 1; fi
+          node -e "$Q" data/abo-tracker.db "select name from subscriptions where id = 'restore-test-1'" | tee /tmp/r
+          grep -q "Wiederherstellungstest Größe" /tmp/r

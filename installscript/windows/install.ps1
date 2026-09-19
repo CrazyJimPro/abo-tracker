@@ -238,8 +238,8 @@ function Write-SqliteFailureHint {
         Write-Note "  1. Build-Werkzeuge:"
         Write-Note "     winget install --id Microsoft.VisualStudio.2022.BuildTools --override ""--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"""
         Write-Note "     winget install --id Python.Python.3.12"
-        Write-Note "  2. Freigabe des Install-Scripts (npm blockiert es sonst):"
-        Write-Note "     npm install-scripts approve better-sqlite3"
+        Write-Note "  2. Danach kompilieren:"
+        Write-Note "     npm rebuild better-sqlite3"
         Write-Note "Ist 64-Bit-Node eine Option, ist der Wechsel darauf der einfachere Weg."
     } elseif ($prebuild -eq "1") {
         # Prebuild liegt vor, laden geht trotzdem nicht: dann ist die Datei
@@ -288,17 +288,23 @@ try {
     # schon eine harmlose Deprecation-Warnung im Installationsfenster als
     # roter Fehlerblock ("npm.cmd : npm warn deprecated ...", dazu
     # "NativeCommandError" und Zeilenangabe).
+    # --ignore-scripts: keine Abhängigkeit braucht ihr Install-Script (siehe
+    # allowScripts in package.json). allowScripts allein versteht erst npm 12;
+    # npm 10 (bei einem vorhandenen Node 22) startete für better-sqlite3 sonst
+    # das implizite "node-gyp rebuild" — ohne Build Tools ein Fehlschlag, obwohl
+    # es bei vorhandenem Prebuild nichts kompiliert. Gesehen unter Linux mit
+    # npm 10, siehe ../install.sh.
     $prevEap = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
         if (Test-Path "package-lock.json") {
-            & $Npm ci --no-audit --no-fund 2>&1 | ForEach-Object { "$_" } | Tee-Object -Variable npmOutput
+            & $Npm ci --no-audit --no-fund --ignore-scripts 2>&1 | ForEach-Object { "$_" } | Tee-Object -Variable npmOutput
             if ($LASTEXITCODE -ne 0) {
                 Write-Note "npm ci fehlgeschlagen, versuche npm install …"
-                & $Npm install --no-audit --no-fund 2>&1 | ForEach-Object { "$_" } | Tee-Object -Variable npmOutput
+                & $Npm install --no-audit --no-fund --ignore-scripts 2>&1 | ForEach-Object { "$_" } | Tee-Object -Variable npmOutput
             }
         } else {
-            & $Npm install --no-audit --no-fund 2>&1 | ForEach-Object { "$_" } | Tee-Object -Variable npmOutput
+            & $Npm install --no-audit --no-fund --ignore-scripts 2>&1 | ForEach-Object { "$_" } | Tee-Object -Variable npmOutput
         }
     } finally {
         $ErrorActionPreference = $prevEap

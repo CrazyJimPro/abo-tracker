@@ -57,9 +57,10 @@ export default async function SettingsPage() {
               Sicherung erstellen
             </Button>
             <p className="text-xs text-muted-foreground">
-              Landet im Download-Ordner des Browsers. Wiederherstellen unter Windows beim Installieren
-              (Seite „Daten übernehmen“) oder über „Abo-Tracker wiederherstellen“ im Startmenü. Die
-              Datei gut aufbewahren: Wer sie hat, hat alle Daten.
+              Landet im Download-Ordner des Browsers. Wiederherstellen lässt sie sich beim Installieren
+              — der Installer findet die neueste Sicherung und fragt nach — oder später über „Abo-Tracker
+              wiederherstellen“ im Startmenü (Windows) bzw. scripts/restore.sh (Linux). Die Datei gut
+              aufbewahren: Wer sie hat, hat alle Daten.
             </p>
           </CardContent>
         </Card>

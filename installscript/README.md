@@ -196,20 +196,37 @@ Variable `KEEP` einstellbar. Node muss dafür nicht von Hand gesucht werden —
 
 ## Restore
 
+**Bei der Installation:** Findet eine Erstinstallation eine Sicherung, fragt
+sie, ob Konten und Abos daraus übernommen werden sollen (Vorgabe: nein).
+Gesucht wird die neueste von
+
+- `abo-tracker-*.db` im Download-Ordner („Sicherung erstellen“ in der App),
+- `abo-backup/abo-tracker-*.db` auf dem Schreibtisch (`backup-to-desktop.sh`),
+- `<Projektordner>-data-backup-*/abo-tracker.db` (`uninstall.sh --keep-data`).
+
+Eine Sicherung von woanders, oder ohne Nachfrage:
+
 ```bash
-cd ~/abo-tracker
-scripts/stop-prod.sh                          # 1. Server anhalten
-rm -f data/abo-tracker.db-wal data/abo-tracker.db-shm
-cp <sicherung> data/abo-tracker.db            # 2. Sicherung einspielen
-scripts/start-prod.sh &                       # 3. Server starten
+./installscript/install.sh --restore <sicherung>
 ```
 
-Für `<sicherung>` je nach Variante `…/backup-ordner/abo-tracker.db` (A) oder
-die einzelne Backup-Datei (B) einsetzen.
+**In einer bestehenden Installation:**
 
-Schritt 1 und das Löschen der `-wal`/`-shm`-Dateien sind beide wichtig: eine
-stehengebliebene WAL-Datei gehört zur *alten* Datenbank und würde nach dem
-Start über die frisch eingespielte gelegt.
+```bash
+cd ~/abo-tracker
+scripts/restore.sh                  # neueste Sicherung (siehe oben), fragt vorher nach
+scripts/restore.sh <sicherung>      # bestimmte .db-Datei oder Ordner mit abo-tracker.db
+```
+
+Das stoppt den Server, legt die bisherige Datenbank als
+`abo-backup/vor-wiederherstellung-<Zeit>.db` auf den Schreibtisch, spielt die
+Sicherung ein, bringt sie per Migration auf den aktuellen Stand und startet
+den Server wieder, falls er lief.
+
+In beiden Fällen wird die Sicherung vorher geprüft (SQLite, intakt,
+Abo-Tracker-Datenbank, nicht aus einer neueren App-Version). Scheitert die
+Prüfung, bleibt die bisherige Datenbank unverändert. Eine neben der Sicherung
+liegende `-wal`-Datei (Ordnerkopie aus Variante A) wird mit eingespielt.
 
 Danach einloggen und stichprobenartig prüfen, ob die Abos vollständig sind.
 Beachte: mit der Datenbank kommen auch die **Passwörter vom Zeitpunkt der
@@ -249,10 +266,11 @@ von einer Deinstallation siehe [Backup](#backup) oben.
 
 ## Umzug auf einen anderen Rechner
 
-1. Auf dem neuen Rechner ganz normal installieren (Schnellstart oben).
-2. Server stoppen, `data/abo-tracker.db` aus der Sicherung einspielen wie im
-   Abschnitt *Restore*.
-3. Server starten. Die Zugangsdaten sind dieselben wie auf dem alten Rechner.
+1. Auf dem alten Rechner in der App „Sicherung erstellen“ und die Datei in
+   den Download-Ordner des neuen Rechners legen.
+2. Auf dem neuen Rechner ganz normal installieren (Schnellstart oben) und die
+   Frage nach der gefundenen Sicherung mit „j“ beantworten.
+3. Fertig. Die Zugangsdaten sind dieselben wie auf dem alten Rechner.
 
 ## Wenn etwas klemmt
 

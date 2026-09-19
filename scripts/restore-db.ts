@@ -33,8 +33,19 @@ function resolveSource(p: string): string {
   return inside;
 }
 
-function removeDb(file: string) {
-  for (const f of [file, `${file}-wal`, `${file}-shm`]) fs.rmSync(f, { force: true });
+// Erst neben das Ziel schreiben, dann per rename darüberlegen: rename ist
+// atomar, es gibt also keinen Moment ohne Datenbank, und scheitert das
+// Schreiben, bleibt die alte unangetastet. Vorher löschen und dann an
+// derselben Stelle neu anlegen ging unter WSL1 schief — die frisch
+// geschriebene Datei war für den nächsten Prozess mal unsichtbar, mal ganz
+// verschwunden. -wal/-shm gehören zur alten Datenbank und müssen weg, sonst
+// spielt SQLite beim nächsten Öffnen fremde Seiten in die neue ein.
+async function replaceDb(db: Database.Database, dest: string) {
+  const staged = `${dest}.restore-tmp`;
+  fs.rmSync(staged, { force: true });
+  await db.backup(staged);
+  for (const f of [`${dest}-wal`, `${dest}-shm`]) fs.rmSync(f, { force: true });
+  fs.renameSync(staged, dest);
 }
 
 async function main() {
@@ -90,8 +101,7 @@ async function main() {
         console.log(`Bisherige Datenbank gesichert: ${safetyCopy}`);
       }
 
-      removeDb(dest);
-      await db.backup(dest);
+      await replaceDb(db, dest);
       console.log(`RESTORED users=${users} subscriptions=${subscriptions}`);
     } finally {
       db.close();

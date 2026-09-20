@@ -1,0 +1,37 @@
+# Zeilenenden fuer alle Systeme festlegen.
+#
+# Ohne diese Datei haengt das Ergebnis an der lokalen Einstellung
+# core.autocrlf, die auf jedem Rechner einzeln gesetzt werden muss.
+# Wer das Repo auf einem zweiten System auscheckt (Linux, WSL, neuer
+# PC), bekommt sonst leicht die falschen Zeilenenden - und .bat/.cmd
+# mit LF laesst Windows mit "Sprungziel wurde nicht gefunden"
+# abbrechen, .sh mit CRLF laesst Linux mit "bad interpreter" abbrechen.
+#
+# Im Repository steht Text immer mit LF. Die Angaben unten betreffen
+# nur, wie die Dateien in der Arbeitskopie landen.
+
+# Grundregel: Git erkennt Textdateien selbst und speichert sie mit LF.
+* text=auto
+
+# Skripte fuer Unix - brauchen LF, auch wenn sie unter Windows
+# bearbeitet werden. Ein \r am Zeilenende landet sonst im Wert jeder
+# Variablen und der Shebang zeigt ins Leere.
+*.sh text eol=lf
+
+# Skripte fuer Windows - brauchen CRLF.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.iss text eol=crlf
+
+# Binaerdateien nie umschreiben.
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.db binary
+*.exe binary

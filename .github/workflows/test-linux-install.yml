@@ -19,6 +19,8 @@ on:
       - "package-lock.json"
       - "drizzle/**"
       - ".github/workflows/test-linux-install.yml"
+      # Legt fest, mit welchen Zeilenenden die .sh-Dateien hier ankommen.
+      - ".gitattributes"
 
 jobs:
   install-restore:

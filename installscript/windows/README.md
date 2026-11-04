@@ -13,17 +13,6 @@ steht in der [allgemeinen Anleitung](../README.md).
 - [Wenn etwas nicht klappt](#wenn-etwas-nicht-klappt)
 - [Technische Details](#technische-details)
 
-> **Gut zu wissen:** Die Fragen im Installer sind auf Deutsch, die Knöpfe
-> unten rechts aber auf Englisch:
->
-> | Knopf | heißt |
-> | --- | --- |
-> | **Next** | Weiter |
-> | **Back** | Zurück |
-> | **Browse…** | Durchsuchen |
-> | **Install** | Installieren |
-> | **Finish** | Fertigstellen |
-
 ---
 
 ## Erstinstallation
@@ -57,7 +46,7 @@ ausführen**.
 
 ### Schritt 3: Ordner
 
-Seite *Select Destination Location*: Nichts ändern, auf **Next** klicken.
+Seite *Ziel-Ordner wählen*: Nichts ändern, auf **Weiter** klicken.
 
 ### Schritt 4: Daten übernehmen
 
@@ -65,14 +54,14 @@ Seite *Daten übernehmen*. Hier gibt es zwei Möglichkeiten:
 
 - **Du benutzt den Abo-Tracker zum ersten Mal:** Der obere Punkt
   *„Nein, ohne Sicherung weiter“* ist schon ausgewählt. Einfach auf
-  **Next** klicken.
+  **Weiter** klicken.
 - **Du hast eine Sicherung** (zum Beispiel vom alten Rechner):
-  1. *„Ja, Daten aus einer Sicherung übernehmen“* anklicken, dann **Next**.
+  1. *„Ja, Daten aus einer Sicherung übernehmen“* anklicken, dann **Weiter**.
   2. Seite *Sicherung auswählen*: Steht im Feld schon eine Datei, ist das
-     deine neueste Sicherung. Dann einfach **Next**.
-  3. Ist das Feld leer oder steht die falsche Datei darin: auf **Browse…**
+     deine neueste Sicherung. Dann einfach **Weiter**.
+  3. Ist das Feld leer oder steht die falsche Datei darin: auf **Durchsuchen …**
      klicken, die Sicherung suchen (sie heißt zum Beispiel
-     `abo-tracker-2026-09-19.db`), anklicken, **Öffnen**, dann **Next**.
+     `abo-tracker-2026-09-19.db`), anklicken, **Öffnen**, dann **Weiter**.
 
 > **Tipp:** Lege die Sicherung vorher in deinen Ordner **Downloads**. Dann
 > trägt der Installer sie von selbst ein.
@@ -80,14 +69,14 @@ Seite *Daten übernehmen*. Hier gibt es zwei Möglichkeiten:
 ### Schritt 5: E-Mail-Adresse
 
 Seite *Admin-Zugang*: Deine E-Mail-Adresse in das Feld tippen und auf
-**Next** klicken. Mit dieser Adresse meldest du dich später an.
+**Weiter** klicken. Mit dieser Adresse meldest du dich später an.
 
 Hast du in Schritt 4 eine Sicherung gewählt, kommt diese Seite nicht. Die
 Anmeldedaten stecken dann schon in der Sicherung.
 
 ### Schritt 6: Installieren
 
-Seite *Ready to Install*: auf **Install** klicken.
+Seite *Bereit zur Installation*: auf **Installieren** klicken.
 
 Jetzt öffnet sich ein **schwarzes Fenster**, in dem viel Text durchläuft.
 Das ist richtig so. **Das Fenster nicht schließen**, einfach warten. Das
@@ -103,14 +92,14 @@ Wenn das schwarze Fenster weg ist, passieren zwei Dinge:
 
 **Schreib dir das Passwort jetzt auf.** Es wird nie wieder angezeigt. Es
 liegt außerdem schon in der Zwischenablage, du kannst es also gleich mit
-**Strg+V** einfügen. Dann auf **OK** und danach auf **Finish** klicken.
+**Strg+V** einfügen. Dann auf **OK** und danach auf **Fertigstellen** klicken.
 
 Siehst du das kleine Fenster nicht, liegt es hinter dem Browser. Klicke unten
 in der Taskleiste auf das Symbol des Installers.
 
 Hast du in Schritt 4 eine Sicherung gewählt, steht im Fenster stattdessen
 **„Die Sicherung wurde eingespielt.“** und wie viele Konten und Abos
-übernommen wurden. Dann gilt dein altes Passwort. **OK**, dann **Finish**.
+übernommen wurden. Dann gilt dein altes Passwort. **OK**, dann **Fertigstellen**.
 
 ### Schritt 8: Anmelden
 
@@ -232,13 +221,13 @@ Deine Abos, Konten und Passwörter bleiben beim Update erhalten.
    **AboTrackerSetup** klicken. Kommt das blaue Windows-Fenster, wieder
    **Weitere Informationen** und **Trotzdem ausführen**.
 4. Seite *Daten übernehmen*: **„Nein, ohne Sicherung weiter“** lassen und
-   auf **Next** klicken. Bitte hier **nicht „Ja“** wählen, sonst werden deine
+   auf **Weiter** klicken. Bitte hier **nicht „Ja“** wählen, sonst werden deine
    aktuellen Daten durch die alte Sicherung ersetzt.
-   (Kommt vorher die Seite mit dem Ordner, nichts ändern und **Next**. Die
+   (Kommt vorher die Seite mit dem Ordner, nichts ändern und **Weiter**. Die
    Frage nach der E-Mail kommt beim Update nicht.)
-5. Seite *Ready to Install*: **Install** klicken. Das schwarze Fenster läuft
+5. Seite *Bereit zur Installation*: **Installieren** klicken. Das schwarze Fenster läuft
    wieder ein paar Minuten. Nicht schließen, einfach warten.
-6. Ein Passwort-Fenster kommt diesmal nicht. Auf **Finish** klicken.
+6. Ein Passwort-Fenster kommt diesmal nicht. Auf **Fertigstellen** klicken.
 7. Im Browser die Seite neu laden (**F5**). Oben neben „Abo-Tracker“ steht
    jetzt die neue Versionsnummer, und „Update verfügbar“ ist verschwunden.
 
@@ -256,12 +245,12 @@ Deinstaller fragt vorher, ob er sie auf den Desktop retten soll.
 4. Rechts neben *Abo-Tracker* auf die drei Punkte **…** klicken, dann auf
    **Deinstallieren**, und noch einmal auf **Deinstallieren**.
    (Windows 10: auf *Abo-Tracker* klicken, dann zweimal **Deinstallieren**.)
-5. Die englische Frage *„Are you sure you want to completely remove
-   Abo-Tracker …?“* mit **Ja** (bzw. **Yes**) beantworten.
+5. Die Frage *„Sind Sie sicher, dass Sie Abo-Tracker und alle zugehörigen
+   Komponenten entfernen möchten?“* mit **Ja** beantworten.
 6. Die Frage *„Soll vorher eine Kopie auf dem Desktop abgelegt werden?“* mit
    **Ja** beantworten. Ein schwarzes Fenster blitzt kurz auf.
-7. Zum Schluss meldet ein Fenster, dass der Abo-Tracker entfernt wurde.
-   **OK** klicken.
+7. Zum Schluss meldet ein Fenster *„Abo-Tracker wurde erfolgreich von Ihrem
+   Computer entfernt.“* **OK** klicken.
 
 **Deine Daten** liegen danach auf dem Desktop im Ordner
 `abo-tracker-backup-<Datum>`, darin die Datei `abo-tracker.db`. Heb diesen

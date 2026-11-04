@@ -17,11 +17,11 @@
 
 #define MyAppName "Abo-Tracker"
 ; Von aussen überschreibbar: der Release-Workflow gibt die Version des
-; gepushten v*-Tags mit "iscc /DMyAppVersion=1.10.0 ..." herein. Ohne das trug
+; gepushten v*-Tags mit "iscc /DMyAppVersion=1.10.1 ..." herein. Ohne das trug
 ; jede gebaute .exe die hier zuletzt von Hand gepflegte Nummer — ein Release
 ; v1.7.0 hätte sich in "Apps & Features" weiter als 1.6.5 eingetragen.
 #ifndef MyAppVersion
-  #define MyAppVersion "1.10.0"
+  #define MyAppVersion "1.10.1"
 #endif
 #define MyAppPublisher "Abo-Tracker"
 #define MyAppURL "https://github.com/CrazyJimPro/abo-tracker"
@@ -56,6 +56,13 @@ WizardStyle=modern
 ; "Apps & Features" erschien deshalb ein Platzhalter. Der Deinstaller selbst
 ; existiert immer und bringt ein richtiges Icon mit.
 UninstallDisplayIcon={uninstallexe}
+
+; Ohne diesen Abschnitt nimmt Inno die englischen Standardtexte: die eigenen
+; Seiten unten waren deutsch, Knöpfe und Standardseiten ("Next", "Install",
+; "Select Destination Location") und die Rückfrage beim Deinstallieren aber
+; englisch. Eine einzige Sprache, also auch keine Sprachauswahl beim Start.
+[Languages]
+Name: "de"; MessagesFile: "compiler:Languages\German.isl"
 
 [Files]
 Source: "find-node.ps1"; DestDir: "{app}\installscript\windows"; Flags: ignoreversion

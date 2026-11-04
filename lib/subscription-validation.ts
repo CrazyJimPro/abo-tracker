@@ -47,31 +47,88 @@ export function isValidIsoDate(s: string): boolean {
   return date.getUTCFullYear() === y && date.getUTCMonth() === mo - 1 && date.getUTCDate() === d;
 }
 
-export function validate(fields: SubscriptionFields): string | null {
-  if (!fields.name) return "Name ist erforderlich.";
+// Liest die Abo-Felder aus dem Formular. Liegt hier statt in
+// lib/actions/subscriptions.ts, damit auch das Formular selbst vor dem
+// Absenden genau dieselben Werte prüfen kann wie der Server.
+export function readSubscriptionFields(formData: FormData): SubscriptionFields {
+  const name = (formData.get("name") as string)?.trim();
+  const amountRaw = (formData.get("amount") as string)?.trim();
+  const amount = amountRaw ? Number(amountRaw) : NaN;
+  const billingInterval = formData.get("billing_interval") as string;
+  const status = formData.get("status") as string;
+  const categoryIdRaw = (formData.get("category_id") as string)?.trim();
+  const categoryId = categoryIdRaw && categoryIdRaw !== "none" ? categoryIdRaw : null;
+  const nextBillingDate = (formData.get("next_billing_date") as string)?.trim() || null;
+  const notes = (formData.get("notes") as string)?.trim() || null;
+  const regularAmountRaw = (formData.get("regular_amount") as string)?.trim();
+  const regularAmount = regularAmountRaw ? Number(regularAmountRaw) : null;
+  const introUntil = (formData.get("intro_until") as string)?.trim() || null;
+  return {
+    name,
+    amount,
+    billingInterval,
+    status,
+    categoryId,
+    nextBillingDate,
+    notes,
+    regularAmount,
+    introUntil,
+  };
+}
+
+// Schlüssel sind die name-Attribute der Formularfelder, damit das Formular
+// jeden Fehler direkt dem richtigen Feld zuordnen kann.
+export type SubscriptionFieldName =
+  | "name"
+  | "amount"
+  | "billing_interval"
+  | "status"
+  | "category_id"
+  | "new_category_name"
+  | "next_billing_date"
+  | "regular_amount"
+  | "intro_until";
+
+export type SubscriptionFieldErrors = Partial<Record<SubscriptionFieldName, string>>;
+
+export const FIELD_ERRORS_MESSAGE = "Bitte die rot markierten Felder prüfen.";
+
+// Sammelt alle Fehler auf einmal, damit das Formular jedes betroffene Feld
+// gleichzeitig markieren kann statt eines nach dem anderen.
+export function validateFields(fields: SubscriptionFields): SubscriptionFieldErrors {
+  const errors: SubscriptionFieldErrors = {};
+  if (!fields.name) errors.name = "Name ist erforderlich.";
   if (!Number.isFinite(fields.amount) || fields.amount < 0) {
-    return "Betrag muss eine positive Zahl sein.";
+    errors.amount = "Betrag muss eine positive Zahl sein.";
   }
   if (!BILLING_INTERVALS.includes(fields.billingInterval as BillingInterval)) {
-    return "Ungültiges Intervall.";
+    errors.billing_interval = "Ungültiges Intervall.";
   }
   if (!STATUSES.includes(fields.status as SubscriptionStatus)) {
-    return "Ungültiger Status.";
+    errors.status = "Ungültiger Status.";
   }
   if (fields.nextBillingDate !== null && !isValidIsoDate(fields.nextBillingDate)) {
-    return `Nächste Abrechnung "${fields.nextBillingDate}" ist kein gültiges Datum (TT.MM.JJJJ oder JJJJ-MM-TT).`;
+    errors.next_billing_date = `Nächste Abrechnung "${fields.nextBillingDate}" ist kein gültiges Datum (TT.MM.JJJJ oder JJJJ-MM-TT).`;
   }
   if (fields.introUntil !== null && !isValidIsoDate(fields.introUntil)) {
-    return `Aktionspreis gilt bis "${fields.introUntil}" ist kein gültiges Datum (TT.MM.JJJJ oder JJJJ-MM-TT).`;
+    errors.intro_until = `Aktionspreis gilt bis "${fields.introUntil}" ist kein gültiges Datum (TT.MM.JJJJ oder JJJJ-MM-TT).`;
   }
   if (
     fields.regularAmount !== null &&
     (!Number.isFinite(fields.regularAmount) || fields.regularAmount < 0)
   ) {
-    return "Regulärer Preis muss eine positive Zahl sein.";
+    errors.regular_amount = "Regulärer Preis muss eine positive Zahl sein.";
   }
-  if ((fields.regularAmount !== null) !== (fields.introUntil !== null)) {
-    return "Für einen Aktionspreis bitte regulären Preis und Enddatum angeben.";
+  // Aktionspreis braucht beides: markiert wird das Feld, das noch fehlt.
+  if (fields.regularAmount !== null && fields.introUntil === null) {
+    errors.intro_until ??= "Für einen Aktionspreis bitte auch das Enddatum angeben.";
   }
-  return null;
+  if (fields.regularAmount === null && fields.introUntil !== null) {
+    errors.regular_amount ??= "Für einen Aktionspreis bitte auch den regulären Preis angeben.";
+  }
+  return errors;
+}
+
+export function validate(fields: SubscriptionFields): string | null {
+  return Object.values(validateFields(fields))[0] ?? null;
 }

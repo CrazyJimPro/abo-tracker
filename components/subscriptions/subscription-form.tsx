@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { ActionState } from "@/lib/actions/subscriptions";
+import {
+  FIELD_ERRORS_MESSAGE,
+  readSubscriptionFields,
+  validateFields,
+  type SubscriptionFieldErrors,
+  type SubscriptionFieldName,
+} from "@/lib/subscription-validation";
 
 const initialState: ActionState = { error: null };
 
@@ -29,7 +36,26 @@ const STATUS_OPTIONS = [
   { value: "cancelled", label: "Gekündigt" },
 ];
 
+// Reihenfolge der Felder im Formular — das erste fehlerhafte bekommt den Fokus.
+// Die ids der Felder sind gleich ihren name-Attributen.
+const FIELD_ORDER: SubscriptionFieldName[] = [
+  "name",
+  "amount",
+  "billing_interval",
+  "status",
+  "category_id",
+  "new_category_name",
+  "next_billing_date",
+  "regular_amount",
+  "intro_until",
+];
+
 type CategoryOption = { id: string; name: string };
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="text-xs text-destructive">{message}</p>;
+}
 
 export function SubscriptionForm({
   action,
@@ -62,22 +88,88 @@ export function SubscriptionForm({
   const [categoryValue, setCategoryValue] = useState(defaultValues?.categoryId ?? "none");
   const isNewCategory = categoryValue === "__new__";
 
+  const [errors, setErrors] = useState<SubscriptionFieldErrors>({});
+  const [message, setMessage] = useState<string | null>(null);
+
+  // Übernimmt das Ergebnis der zuletzt fertig gewordenen Server-Action
+  // (Speichern oder Duplizieren) in die angezeigten Fehler.
+  const [seen, setSeen] = useState({ state, duplicateState });
+  if (seen.state !== state || seen.duplicateState !== duplicateState) {
+    const fresh = seen.state !== state ? state : duplicateState;
+    setSeen({ state, duplicateState });
+    setErrors(fresh.fieldErrors ?? {});
+    setMessage(fresh.fieldErrors ? null : fresh.error);
+  }
+
+  const hasFieldErrors = Object.keys(errors).length > 0;
+
+  function clearError(name: string) {
+    setErrors((prev) => {
+      if (!(name in prev)) return prev;
+      const next = { ...prev };
+      delete next[name as SubscriptionFieldName];
+      return next;
+    });
+  }
+
+  // Bewusst kein <form action={…}>: React setzt ein Formular nach jeder
+  // abgeschlossenen Action zurück, und dann wären bei einem Fehler alle
+  // Eingaben weg. Hier wird die Action selbst aufgerufen, das Formular bleibt
+  // so stehen, wie es ausgefüllt wurde.
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const submitter = (e.nativeEvent as SubmitEvent).submitter;
+    const formData = new FormData(e.currentTarget, submitter);
+
+    const found = validateFields(readSubscriptionFields(formData));
+    if (isNewCategory && !(formData.get("new_category_name") as string)?.trim()) {
+      found.new_category_name = "Bitte einen Namen für die neue Kategorie angeben.";
+    }
+    if (Object.keys(found).length > 0) {
+      setErrors(found);
+      setMessage(null);
+      const first = FIELD_ORDER.find((f) => found[f]);
+      if (first) document.getElementById(first)?.focus();
+      return;
+    }
+
+    setErrors({});
+    setMessage(null);
+    const dispatch =
+      submitter?.dataset.action === "duplicate" ? duplicateFormAction : formAction;
+    startTransition(() => dispatch(formData));
+  }
+
   return (
-    <form action={formAction} className="space-y-4">
+    <form
+      onSubmit={handleSubmit}
+      onChange={(e) => {
+        const target = e.target as EventTarget;
+        if (target instanceof HTMLInputElement) clearError(target.name);
+      }}
+      noValidate
+      className="space-y-4"
+    >
       <div className="space-y-2">
-        <Label htmlFor="name">Name</Label>
+        <Label htmlFor="name" className={errors.name ? "text-destructive" : undefined}>
+          Name
+        </Label>
         <Input
           id="name"
           name="name"
           required
+          aria-invalid={errors.name ? true : undefined}
           defaultValue={defaultValues?.name}
           placeholder="z. B. Netflix"
         />
+        <FieldError message={errors.name} />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="amount">Betrag (€)</Label>
+          <Label htmlFor="amount" className={errors.amount ? "text-destructive" : undefined}>
+            Betrag (€)
+          </Label>
           <Input
             id="amount"
             name="amount"
@@ -85,14 +177,20 @@ export function SubscriptionForm({
             step="0.01"
             min="0"
             required
+            aria-invalid={errors.amount ? true : undefined}
             defaultValue={defaultValues?.amount}
             placeholder="9.99"
           />
+          <FieldError message={errors.amount} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="billing_interval">Intervall</Label>
           <Select name="billing_interval" defaultValue={defaultValues?.billingInterval ?? "monthly"}>
-            <SelectTrigger id="billing_interval" className="w-full">
+            <SelectTrigger
+              id="billing_interval"
+              className="w-full"
+              aria-invalid={errors.billing_interval ? true : undefined}
+            >
               <SelectValue placeholder="Intervall wählen" />
             </SelectTrigger>
             <SelectContent>
@@ -103,6 +201,7 @@ export function SubscriptionForm({
               ))}
             </SelectContent>
           </Select>
+          <FieldError message={errors.billing_interval} />
         </div>
       </div>
 
@@ -110,7 +209,11 @@ export function SubscriptionForm({
         <div className="space-y-2">
           <Label htmlFor="status">Status</Label>
           <Select name="status" defaultValue={defaultValues?.status ?? "active"}>
-            <SelectTrigger id="status" className="w-full">
+            <SelectTrigger
+              id="status"
+              className="w-full"
+              aria-invalid={errors.status ? true : undefined}
+            >
               <SelectValue placeholder="Status wählen" />
             </SelectTrigger>
             <SelectContent>
@@ -121,13 +224,17 @@ export function SubscriptionForm({
               ))}
             </SelectContent>
           </Select>
+          <FieldError message={errors.status} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="category_id">Kategorie</Label>
           <Select
             name="category_id"
             value={categoryValue}
-            onValueChange={(v) => setCategoryValue(v ?? "none")}
+            onValueChange={(v) => {
+              setCategoryValue(v ?? "none");
+              clearError("new_category_name");
+            }}
           >
             <SelectTrigger id="category_id" className="w-full">
               <SelectValue placeholder="Kategorie wählen" />
@@ -147,14 +254,21 @@ export function SubscriptionForm({
 
       {isNewCategory && (
         <div className="space-y-2">
-          <Label htmlFor="new_category_name">Neue Kategorie</Label>
+          <Label
+            htmlFor="new_category_name"
+            className={errors.new_category_name ? "text-destructive" : undefined}
+          >
+            Neue Kategorie
+          </Label>
           <Input
             id="new_category_name"
             name="new_category_name"
             required
             autoFocus
+            aria-invalid={errors.new_category_name ? true : undefined}
             placeholder="z. B. Haushalt"
           />
+          <FieldError message={errors.new_category_name} />
           <p className="text-xs text-muted-foreground">
             Wird als deine private Kategorie angelegt und nur dir angezeigt.
           </p>
@@ -162,36 +276,57 @@ export function SubscriptionForm({
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="next_billing_date">Nächste Abrechnung</Label>
+        <Label
+          htmlFor="next_billing_date"
+          className={errors.next_billing_date ? "text-destructive" : undefined}
+        >
+          Nächste Abrechnung
+        </Label>
         <Input
           id="next_billing_date"
           name="next_billing_date"
           type="date"
+          aria-invalid={errors.next_billing_date ? true : undefined}
           defaultValue={defaultValues?.nextBillingDate ?? ""}
         />
+        <FieldError message={errors.next_billing_date} />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="regular_amount">Regulärer Preis (€)</Label>
+          <Label
+            htmlFor="regular_amount"
+            className={errors.regular_amount ? "text-destructive" : undefined}
+          >
+            Regulärer Preis (€)
+          </Label>
           <Input
             id="regular_amount"
             name="regular_amount"
             type="number"
             step="0.01"
             min="0"
+            aria-invalid={errors.regular_amount ? true : undefined}
             defaultValue={defaultValues?.regularAmount ?? ""}
             placeholder="optional"
           />
+          <FieldError message={errors.regular_amount} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="intro_until">Aktionspreis gilt bis</Label>
+          <Label
+            htmlFor="intro_until"
+            className={errors.intro_until ? "text-destructive" : undefined}
+          >
+            Aktionspreis gilt bis
+          </Label>
           <Input
             id="intro_until"
             name="intro_until"
             type="date"
+            aria-invalid={errors.intro_until ? true : undefined}
             defaultValue={defaultValues?.introUntil ?? ""}
           />
+          <FieldError message={errors.intro_until} />
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
@@ -205,8 +340,8 @@ export function SubscriptionForm({
         <Textarea id="notes" name="notes" defaultValue={defaultValues?.notes ?? ""} rows={3} />
       </div>
 
-      {(state.error || duplicateState.error) && (
-        <p className="text-sm text-red-600">{state.error || duplicateState.error}</p>
+      {(hasFieldErrors || message) && (
+        <p className="text-sm text-destructive">{hasFieldErrors ? FIELD_ERRORS_MESSAGE : message}</p>
       )}
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={isPending || isDuplicatePending}>
@@ -215,7 +350,7 @@ export function SubscriptionForm({
         {duplicateAction && (
           <Button
             type="submit"
-            formAction={duplicateFormAction}
+            data-action="duplicate"
             variant="secondary"
             disabled={isPending || isDuplicatePending}
           >

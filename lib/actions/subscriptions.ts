@@ -14,34 +14,19 @@ import {
   type SubscriptionValues,
 } from "@/lib/db/queries";
 import type { BillingInterval, SubscriptionStatus } from "@/lib/db/schema";
-import { CATEGORY_COLORS, validate } from "@/lib/subscription-validation";
+import {
+  CATEGORY_COLORS,
+  FIELD_ERRORS_MESSAGE,
+  readSubscriptionFields,
+  validateFields,
+  type SubscriptionFieldErrors,
+} from "@/lib/subscription-validation";
 
-export type ActionState = { error: string | null };
+export type ActionState = { error: string | null; fieldErrors?: SubscriptionFieldErrors };
 
-function readSubscriptionFields(formData: FormData) {
-  const name = (formData.get("name") as string)?.trim();
-  const amountRaw = (formData.get("amount") as string)?.trim();
-  const amount = amountRaw ? Number(amountRaw) : NaN;
-  const billingInterval = formData.get("billing_interval") as string;
-  const status = formData.get("status") as string;
-  const categoryIdRaw = (formData.get("category_id") as string)?.trim();
-  const categoryId = categoryIdRaw && categoryIdRaw !== "none" ? categoryIdRaw : null;
-  const nextBillingDate = (formData.get("next_billing_date") as string)?.trim() || null;
-  const notes = (formData.get("notes") as string)?.trim() || null;
-  const regularAmountRaw = (formData.get("regular_amount") as string)?.trim();
-  const regularAmount = regularAmountRaw ? Number(regularAmountRaw) : null;
-  const introUntil = (formData.get("intro_until") as string)?.trim() || null;
-  return {
-    name,
-    amount,
-    billingInterval,
-    status,
-    categoryId,
-    nextBillingDate,
-    notes,
-    regularAmount,
-    introUntil,
-  };
+function fieldErrorState(fieldErrors: SubscriptionFieldErrors): ActionState | null {
+  if (Object.keys(fieldErrors).length === 0) return null;
+  return { error: FIELD_ERRORS_MESSAGE, fieldErrors };
 }
 
 // Resolves the submitted category selection to a category id. The special
@@ -92,14 +77,16 @@ export async function createSubscription(
   formData: FormData
 ): Promise<ActionState> {
   const fields = readSubscriptionFields(formData);
-  const validationError = validate(fields);
-  if (validationError) return { error: validationError };
+  const invalid = fieldErrorState(validateFields(fields));
+  if (invalid) return invalid;
 
   const user = await getCurrentUser();
   if (!user) return { error: "Nicht angemeldet." };
 
   const resolved = resolveCategoryId(user.id, fields.categoryId, formData);
-  if ("error" in resolved) return { error: resolved.error };
+  if ("error" in resolved) {
+    return { error: resolved.error, fieldErrors: { new_category_name: resolved.error } };
+  }
 
   insertSubscription(user.id, toValues(fields, resolved.categoryId));
 
@@ -114,14 +101,16 @@ export async function updateSubscription(
   formData: FormData
 ): Promise<ActionState> {
   const fields = readSubscriptionFields(formData);
-  const validationError = validate(fields);
-  if (validationError) return { error: validationError };
+  const invalid = fieldErrorState(validateFields(fields));
+  if (invalid) return invalid;
 
   const user = await getCurrentUser();
   if (!user) return { error: "Nicht angemeldet." };
 
   const resolved = resolveCategoryId(user.id, fields.categoryId, formData);
-  if ("error" in resolved) return { error: resolved.error };
+  if ("error" in resolved) {
+    return { error: resolved.error, fieldErrors: { new_category_name: resolved.error } };
+  }
 
   updateSubscriptionRow(user.id, subscriptionId, toValues(fields, resolved.categoryId));
 

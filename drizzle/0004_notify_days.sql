@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `notify_days` integer DEFAULT 7 NOT NULL;

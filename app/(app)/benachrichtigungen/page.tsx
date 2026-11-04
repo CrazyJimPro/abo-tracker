@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth/guards";
 import { listDueUpTo, listPromoEnding } from "@/lib/db/queries";
 import { markBilled } from "@/lib/actions/subscriptions";
 import { Button } from "@/components/ui/button";
+import { notifyCutoff } from "@/lib/notify-days";
 
 const CONTAINER =
   "divide-y divide-white/40 rounded-lg border border-white/40 bg-white/40 shadow-lg shadow-black/5 backdrop-blur-xl dark:divide-white/10 dark:border-white/10 dark:bg-white/5";
@@ -21,9 +22,8 @@ export default async function NotificationsPage() {
 
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
-  const cutoff = new Date(now);
-  cutoff.setUTCDate(cutoff.getUTCDate() + 7);
-  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  const cutoffStr = notifyCutoff(now, user.notifyDays);
+  const days = user.notifyDays;
 
   const rows = listDueUpTo(user.id, cutoffStr);
   const overdue = rows.filter((r) => r.nextBillingDate! < todayStr);
@@ -76,7 +76,7 @@ export default async function NotificationsPage() {
       {dueSoon.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-sm font-medium text-muted-foreground">
-            Fällig in den nächsten 7 Tagen ({dueSoon.length})
+            Fällig in den nächsten {days} Tagen ({dueSoon.length})
           </h2>
           <div className={CONTAINER}>{dueSoon.map(renderRow)}</div>
         </section>
@@ -85,7 +85,7 @@ export default async function NotificationsPage() {
       {priceChanges.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-sm font-medium text-muted-foreground">
-            Preiswechsel in den nächsten 7 Tagen ({priceChanges.length})
+            Preiswechsel in den nächsten {days} Tagen ({priceChanges.length})
           </h2>
           <div className={CONTAINER}>
             {priceChanges.map((r) => {

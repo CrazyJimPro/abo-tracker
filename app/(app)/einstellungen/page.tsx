@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth/guards";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { ImportForm } from "@/components/settings/import-form";
+import { NotifyDaysSelect } from "@/components/settings/notify-days-select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,16 @@ export default async function SettingsPage() {
             <Input id="email" defaultValue={user.email} disabled />
           </div>
           <ProfileForm defaultDisplayName={user.displayName ?? ""} />
+        </CardContent>
+      </Card>
+
+      <Card className="max-w-lg">
+        <CardHeader>
+          <CardTitle className="text-base">Benachrichtigungen</CardTitle>
+          <CardDescription>Wie früh dich die App an Fälliges erinnert.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <NotifyDaysSelect defaultDays={user.notifyDays} />
         </CardContent>
       </Card>
 

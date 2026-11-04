@@ -3,7 +3,14 @@
 import { revalidatePath } from "next/cache";
 
 import { getCurrentUser } from "@/lib/auth/session";
-import { listVisibleCategories, setAboCategoryFilter, setAboStatusFilter, updateDisplayName } from "@/lib/db/queries";
+import {
+  listVisibleCategories,
+  setAboCategoryFilter,
+  setAboStatusFilter,
+  setNotifyDays,
+  updateDisplayName,
+} from "@/lib/db/queries";
+import { NOTIFY_DAYS_OPTIONS } from "@/lib/notify-days";
 
 export type ActionState = { error: string | null; success: boolean };
 
@@ -29,6 +36,19 @@ export async function updateAboCategoryFilter(categoryId: string) {
   }
 
   setAboCategoryFilter(user.id, categoryId);
+}
+
+export async function updateNotifyDays(days: number): Promise<boolean> {
+  if (!NOTIFY_DAYS_OPTIONS.includes(days)) return false;
+
+  const user = await getCurrentUser();
+  if (!user) return false;
+
+  setNotifyDays(user.id, days);
+
+  // Das Glocken-Symbol im Kopf zählt mit derselben Vorlaufzeit.
+  revalidatePath("/", "layout");
+  return true;
 }
 
 export async function updateProfile(

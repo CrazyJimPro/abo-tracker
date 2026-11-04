@@ -60,6 +60,12 @@ export function SubscriptionForm({
 }) {
   const [categoryValue, setCategoryValue] = useState(defaultValues?.categoryId ?? "none");
   const isNewCategory = categoryValue === "__new__";
+  // Damit im geschlossenen Feld der Name steht und nicht die id.
+  const categoryItems = [
+    { value: "none", label: "Keine" },
+    ...categories.map((c) => ({ value: c.id, label: c.name })),
+    { value: "__new__", label: "+ Neue Kategorie…" },
+  ];
 
   const { isPending, pendingAction, errors, formMessage, formProps, clearError, invalid, labelClass } =
     useFieldForm<ActionState>({
@@ -116,7 +122,11 @@ export function SubscriptionForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="billing_interval">Intervall</Label>
-          <Select name="billing_interval" defaultValue={defaultValues?.billingInterval ?? "monthly"}>
+          <Select
+            name="billing_interval"
+            items={BILLING_INTERVAL_OPTIONS}
+            defaultValue={defaultValues?.billingInterval ?? "monthly"}
+          >
             <SelectTrigger
               id="billing_interval"
               className="w-full"
@@ -139,7 +149,11 @@ export function SubscriptionForm({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="status">Status</Label>
-          <Select name="status" defaultValue={defaultValues?.status ?? "active"}>
+          <Select
+            name="status"
+            items={STATUS_OPTIONS}
+            defaultValue={defaultValues?.status ?? "active"}
+          >
             <SelectTrigger id="status" className="w-full" aria-invalid={invalid("status")}>
               <SelectValue placeholder="Status wählen" />
             </SelectTrigger>
@@ -157,6 +171,7 @@ export function SubscriptionForm({
           <Label htmlFor="category_id">Kategorie</Label>
           <Select
             name="category_id"
+            items={categoryItems}
             value={categoryValue}
             onValueChange={(v) => {
               setCategoryValue(v ?? "none");

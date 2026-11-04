@@ -52,6 +52,10 @@ export const users = sqliteTable(
     // Same reasoning as aboStatusFilter above re: no CHECK constraint — and
     // category ids are dynamic per-user anyway, so a fixed enum wouldn't fit.
     aboCategoryFilter: text("abo_category_filter").notNull().default(""),
+    // Wie viele Tage im Voraus Fälligkeiten und Preiswechsel unter
+    // "Benachrichtigungen" auftauchen (siehe lib/notify-days.ts). Ebenfalls
+    // ohne CHECK-Constraint, aus demselben Grund wie aboStatusFilter oben.
+    notifyDays: integer("notify_days").notNull().default(7),
     ...timestamps,
   },
   (t) => [

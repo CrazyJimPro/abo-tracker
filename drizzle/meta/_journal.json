@@ -29,6 +29,13 @@
       "when": 1788797016483,
       "tag": "0003_good_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793813541677,
+      "tag": "0004_notify_days",
+      "breakpoints": true
     }
   ]
 }

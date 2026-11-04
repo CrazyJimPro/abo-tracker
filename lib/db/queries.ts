@@ -421,6 +421,13 @@ export function setAboStatusFilter(userId: string, status: string) {
     .run();
 }
 
+export function setNotifyDays(userId: string, days: number) {
+  db.update(users)
+    .set({ notifyDays: days, updatedAt: nowIso() })
+    .where(eq(users.id, userId))
+    .run();
+}
+
 export function setAboCategoryFilter(userId: string, categoryId: string) {
   db.update(users)
     .set({ aboCategoryFilter: categoryId, updatedAt: nowIso() })

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { UpdateBadge } from "@/components/layout/update-badge";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { CURRENT_VERSION } from "@/lib/version";
+import { notifyCutoff } from "@/lib/notify-days";
 import { BellIcon } from "lucide-react";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -14,9 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 10);
-  const cutoff = new Date(today);
-  cutoff.setUTCDate(cutoff.getUTCDate() + 7);
-  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  const cutoffStr = notifyCutoff(today, user.notifyDays);
 
   const notifCount = countNotifications(user.id, todayStr, cutoffStr);
 

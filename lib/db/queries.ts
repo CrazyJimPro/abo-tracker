@@ -9,10 +9,12 @@ import {
   subscriptions,
   users,
   type BillingInterval,
+  type NoticeUnit,
   type PriceHistorySource,
   type SubscriptionStatus,
   type UserRole,
 } from "./schema";
+import { cancelByDate } from "@/lib/contract";
 
 /*
  * Every read/write of user-owned data lives here and takes the acting user id
@@ -109,6 +111,9 @@ export type SubscriptionValues = {
   notes: string | null;
   regularAmount: number | null;
   introUntil: string | null;
+  contractEnd: string | null;
+  noticePeriod: number | null;
+  noticeUnit: NoticeUnit | null;
 };
 
 const withCategory = {
@@ -122,6 +127,9 @@ const withCategory = {
   notes: subscriptions.notes,
   regularAmount: subscriptions.regularAmount,
   introUntil: subscriptions.introUntil,
+  contractEnd: subscriptions.contractEnd,
+  noticePeriod: subscriptions.noticePeriod,
+  noticeUnit: subscriptions.noticeUnit,
   categoryName: categories.name,
   categoryColor: categories.color,
   categorySortOrder: categories.sortOrder,
@@ -200,7 +208,16 @@ export function findMatchingSubscription(userId: string, values: SubscriptionVal
           : eq(subscriptions.regularAmount, values.regularAmount),
         values.introUntil === null
           ? isNull(subscriptions.introUntil)
-          : eq(subscriptions.introUntil, values.introUntil)
+          : eq(subscriptions.introUntil, values.introUntil),
+        values.contractEnd === null
+          ? isNull(subscriptions.contractEnd)
+          : eq(subscriptions.contractEnd, values.contractEnd),
+        values.noticePeriod === null
+          ? isNull(subscriptions.noticePeriod)
+          : eq(subscriptions.noticePeriod, values.noticePeriod),
+        values.noticeUnit === null
+          ? isNull(subscriptions.noticeUnit)
+          : eq(subscriptions.noticeUnit, values.noticeUnit)
       )
     )
     .get();
@@ -369,8 +386,40 @@ export function listPromoEnding(userId: string, today: string, cutoff: string) {
     .all();
 }
 
+// Abos mit eingetragenem Vertragsende, bei denen der späteste Kündigungstag
+// bis zum cutoff erreicht ist und das Vertragsende noch nicht vorbei ist.
+// "Kündigen bis" hängt an Monatslängen, deshalb wird in JS gefiltert statt in
+// SQL. Gekündigte Abos brauchen keine Erinnerung mehr.
+export function listCancelDeadlines(userId: string, today: string, cutoff: string) {
+  return db
+    .select({
+      id: subscriptions.id,
+      name: subscriptions.name,
+      contractEnd: subscriptions.contractEnd,
+      noticePeriod: subscriptions.noticePeriod,
+      noticeUnit: subscriptions.noticeUnit,
+    })
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.ownerId, userId),
+        ne(subscriptions.status, "cancelled"),
+        isNotNull(subscriptions.contractEnd),
+        gte(subscriptions.contractEnd, today)
+      )
+    )
+    .all()
+    .map((s) => ({ ...s, cancelBy: cancelByDate(s.contractEnd, s.noticePeriod, s.noticeUnit)! }))
+    .filter((s) => s.cancelBy <= cutoff)
+    .sort((a, b) => a.cancelBy.localeCompare(b.cancelBy));
+}
+
 export function countNotifications(userId: string, today: string, cutoff: string) {
-  return listDueUpTo(userId, cutoff).length + listPromoEnding(userId, today, cutoff).length;
+  return (
+    listDueUpTo(userId, cutoff).length +
+    listPromoEnding(userId, today, cutoff).length +
+    listCancelDeadlines(userId, today, cutoff).length
+  );
 }
 
 // ---------- users ----------

@@ -1,4 +1,4 @@
-import type { BillingInterval, SubscriptionStatus } from "@/lib/db/schema";
+import type { BillingInterval, NoticeUnit, SubscriptionStatus } from "@/lib/db/schema";
 
 // Shared by lib/actions/subscriptions.ts (form-based create/update) and
 // lib/actions/csv-import.ts (CSV import) so both stay in sync. Deliberately
@@ -8,6 +8,7 @@ import type { BillingInterval, SubscriptionStatus } from "@/lib/db/schema";
 
 export const BILLING_INTERVALS: BillingInterval[] = ["weekly", "monthly", "quarterly", "yearly"];
 export const STATUSES: SubscriptionStatus[] = ["active", "paused", "cancelled"];
+export const NOTICE_UNITS: NoticeUnit[] = ["days", "weeks", "months"];
 
 // Palette for auto-coloring newly created categories, mirroring the tones of
 // the global seed categories so a fresh private category looks at home in
@@ -35,6 +36,9 @@ export type SubscriptionFields = {
   notes: string | null;
   regularAmount: number | null;
   introUntil: string | null;
+  contractEnd: string | null;
+  noticePeriod: number | null;
+  noticeUnit: string | null;
 };
 
 // Echtes Kalenderdatum im Format JJJJ-MM-TT — "2026-02-30" fällt durch, weil
@@ -63,6 +67,12 @@ export function readSubscriptionFields(formData: FormData): SubscriptionFields {
   const regularAmountRaw = (formData.get("regular_amount") as string)?.trim();
   const regularAmount = regularAmountRaw ? Number(regularAmountRaw) : null;
   const introUntil = (formData.get("intro_until") as string)?.trim() || null;
+  const contractEnd = (formData.get("contract_end") as string)?.trim() || null;
+  const noticePeriodRaw = (formData.get("notice_period") as string)?.trim();
+  const noticePeriod = noticePeriodRaw ? Number(noticePeriodRaw) : null;
+  // Die Einheit zählt nur zusammen mit einer Frist.
+  const noticeUnit =
+    noticePeriod !== null ? (formData.get("notice_unit") as string)?.trim() || "months" : null;
   return {
     name,
     amount,
@@ -73,6 +83,9 @@ export function readSubscriptionFields(formData: FormData): SubscriptionFields {
     notes,
     regularAmount,
     introUntil,
+    contractEnd,
+    noticePeriod,
+    noticeUnit,
   };
 }
 
@@ -87,7 +100,10 @@ export type SubscriptionFieldName =
   | "new_category_name"
   | "next_billing_date"
   | "regular_amount"
-  | "intro_until";
+  | "intro_until"
+  | "contract_end"
+  | "notice_period"
+  | "notice_unit";
 
 export type SubscriptionFieldErrors = Partial<Record<SubscriptionFieldName, string>>;
 
@@ -124,6 +140,18 @@ export function validateFields(fields: SubscriptionFields): SubscriptionFieldErr
   }
   if (fields.regularAmount === null && fields.introUntil !== null) {
     errors.regular_amount ??= "Für einen Aktionspreis bitte auch den regulären Preis angeben.";
+  }
+  if (fields.contractEnd !== null && !isValidIsoDate(fields.contractEnd)) {
+    errors.contract_end = `Vertrag läuft bis "${fields.contractEnd}" ist kein gültiges Datum (TT.MM.JJJJ oder JJJJ-MM-TT).`;
+  }
+  if (
+    fields.noticePeriod !== null &&
+    (!Number.isInteger(fields.noticePeriod) || fields.noticePeriod < 0 || fields.noticePeriod > 999)
+  ) {
+    errors.notice_period = "Kündigungsfrist bitte als ganze Zahl angeben.";
+  }
+  if (fields.noticeUnit !== null && !NOTICE_UNITS.includes(fields.noticeUnit as NoticeUnit)) {
+    errors.notice_unit = "Ungültige Einheit der Kündigungsfrist.";
   }
   return errors;
 }

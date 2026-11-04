@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/guards";
-import { listDueUpTo, listPromoEnding } from "@/lib/db/queries";
+import { listCancelDeadlines, listDueUpTo, listPromoEnding } from "@/lib/db/queries";
+import { formatNoticePeriod } from "@/lib/contract";
 import { markBilled } from "@/lib/actions/subscriptions";
 import { Button } from "@/components/ui/button";
 import { notifyCutoff } from "@/lib/notify-days";
@@ -30,6 +31,7 @@ export default async function NotificationsPage() {
   const dueSoon = rows.filter((r) => r.nextBillingDate! >= todayStr);
 
   const priceChanges = listPromoEnding(user.id, todayStr, cutoffStr);
+  const cancelDeadlines = listCancelDeadlines(user.id, todayStr, cutoffStr);
 
   const todayMs = Date.parse(`${todayStr}T00:00:00Z`);
   const diffDays = (date: string) =>
@@ -60,7 +62,7 @@ export default async function NotificationsPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Benachrichtigungen</h1>
 
-      {rows.length === 0 && priceChanges.length === 0 && (
+      {rows.length === 0 && priceChanges.length === 0 && cancelDeadlines.length === 0 && (
         <p className="text-sm text-muted-foreground">
           Alles erledigt – keine anstehenden Fälligkeiten.
         </p>
@@ -79,6 +81,43 @@ export default async function NotificationsPage() {
             Fällig in den nächsten {days} Tagen ({dueSoon.length})
           </h2>
           <div className={CONTAINER}>{dueSoon.map(renderRow)}</div>
+        </section>
+      )}
+
+      {cancelDeadlines.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Kündigungsfristen ({cancelDeadlines.length})
+          </h2>
+          <div className={CONTAINER}>
+            {cancelDeadlines.map((r) => {
+              const d = diffDays(r.cancelBy);
+              const missed = d < 0;
+              const when = missed
+                ? `Frist seit ${-d} Tag${d === -1 ? "" : "en"} verpasst`
+                : d === 0
+                  ? "heute letzter Tag"
+                  : `noch ${d} Tag${d === 1 ? "" : "e"}`;
+              return (
+                <div key={r.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <Link href={`/abos/${r.id}`} className="text-sm font-medium hover:underline">
+                      {r.name}
+                    </Link>
+                    <p className="text-xs text-muted-foreground">
+                      Spätestens kündigen bis {new Date(r.cancelBy).toLocaleDateString("de-DE")} ·{" "}
+                      <span className={missed || d === 0 ? "font-medium text-destructive" : ""}>
+                        {when}
+                      </span>
+                      {" · Vertrag läuft bis "}
+                      {new Date(r.contractEnd!).toLocaleDateString("de-DE")}
+                      {r.noticePeriod ? ` · Frist ${formatNoticePeriod(r.noticePeriod, r.noticeUnit)}` : ""}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </section>
       )}
 

@@ -1,5 +1,5 @@
 import Papa from "papaparse";
-import type { BillingInterval, SubscriptionStatus } from "@/lib/db/schema";
+import type { BillingInterval, NoticeUnit, SubscriptionStatus } from "@/lib/db/schema";
 
 export const CSV_HEADERS = [
   "ID",
@@ -11,6 +11,9 @@ export const CSV_HEADERS = [
   "Nächste Abrechnung",
   "Regulärer Preis",
   "Aktionspreis gilt bis",
+  "Vertrag läuft bis",
+  "Kündigungsfrist",
+  "Kündigungsfrist Einheit",
   "Notizen",
 ] as const;
 
@@ -31,6 +34,26 @@ export const STATUS_LABELS: Record<SubscriptionStatus, string> = {
   paused: "Pausiert",
   cancelled: "Gekündigt",
 };
+
+// Gleich NOTICE_UNIT_LABELS in lib/contract.ts — hier nochmal, weil dieses
+// Modul ohne Pfad-Alias auskommen muss (npm test lädt es direkt mit Node).
+export const NOTICE_UNIT_LABELS: Record<NoticeUnit, string> = {
+  days: "Tage",
+  weeks: "Wochen",
+  months: "Monate",
+};
+
+const NOTICE_UNIT_BY_LABEL: Record<string, NoticeUnit> = Object.fromEntries(
+  Object.entries(NOTICE_UNIT_LABELS).map(([value, label]) => [label, value as NoticeUnit])
+);
+
+// Leer heißt Monate, wie im Formular; Unbekanntes kommt unverändert zurück
+// und wird von validate() gemeldet.
+export function noticeUnitFromLabel(label: string): string {
+  const t = label.trim();
+  if (!t) return "months";
+  return NOTICE_UNIT_BY_LABEL[t] ?? t;
+}
 
 const BILLING_INTERVAL_BY_LABEL: Record<string, BillingInterval> = Object.fromEntries(
   Object.entries(BILLING_INTERVAL_LABELS).map(([value, label]) => [label, value as BillingInterval])
@@ -58,6 +81,9 @@ export type ExportRow = {
   nextBillingDate: string | null;
   regularAmount: number | null;
   introUntil: string | null;
+  contractEnd: string | null;
+  noticePeriod: number | null;
+  noticeUnit: NoticeUnit | null;
   notes: string | null;
 };
 
@@ -96,6 +122,9 @@ export function encodeSubscriptionsToCsv(rows: ExportRow[]): string {
         r.nextBillingDate ?? "",
         r.regularAmount != null ? formatGermanDecimal(r.regularAmount) : "",
         r.introUntil ?? "",
+        r.contractEnd ?? "",
+        r.noticePeriod != null ? String(r.noticePeriod) : "",
+        r.noticePeriod != null && r.noticeUnit ? NOTICE_UNIT_LABELS[r.noticeUnit] : "",
         r.notes ? csvEscape(r.notes) : "",
       ].join(";")
     );

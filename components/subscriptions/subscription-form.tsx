@@ -16,7 +16,12 @@ import {
 import { FieldError, FormMessage } from "@/components/forms/field-error";
 import { useFieldForm } from "@/components/forms/use-field-form";
 import type { ActionState } from "@/lib/actions/subscriptions";
-import { readSubscriptionFields, validateFields } from "@/lib/subscription-validation";
+import {
+  NOTICE_UNITS,
+  readSubscriptionFields,
+  validateFields,
+} from "@/lib/subscription-validation";
+import { NOTICE_UNIT_LABELS, cancelByDate } from "@/lib/contract";
 
 const initialState: ActionState = { error: null };
 
@@ -26,6 +31,8 @@ const BILLING_INTERVAL_OPTIONS = [
   { value: "quarterly", label: "Vierteljährlich" },
   { value: "yearly", label: "Jährlich" },
 ];
+
+const NOTICE_UNIT_OPTIONS = NOTICE_UNITS.map((u) => ({ value: u, label: NOTICE_UNIT_LABELS[u] }));
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Aktiv" },
@@ -55,11 +62,25 @@ export function SubscriptionForm({
     notes: string | null;
     regularAmount: number | null;
     introUntil: string | null;
+    contractEnd: string | null;
+    noticePeriod: number | null;
+    noticeUnit: string | null;
   };
   submitLabel: string;
 }) {
   const [categoryValue, setCategoryValue] = useState(defaultValues?.categoryId ?? "none");
   const isNewCategory = categoryValue === "__new__";
+  // Nur für den Hinweis "spätestens kündigen bis …" unter den Vertragsfeldern.
+  const [contractEnd, setContractEnd] = useState(defaultValues?.contractEnd ?? "");
+  const [noticePeriod, setNoticePeriod] = useState(
+    defaultValues?.noticePeriod != null ? String(defaultValues.noticePeriod) : ""
+  );
+  const [noticeUnit, setNoticeUnit] = useState(defaultValues?.noticeUnit ?? "months");
+  const noticeNumber = Number(noticePeriod);
+  const cancelBy =
+    contractEnd && (!noticePeriod || Number.isInteger(noticeNumber))
+      ? cancelByDate(contractEnd, noticePeriod ? noticeNumber : null, noticeUnit)
+      : null;
   // Damit im geschlossenen Feld der Name steht und nicht die id.
   const categoryItems = [
     { value: "none", label: "Keine" },
@@ -263,6 +284,76 @@ export function SubscriptionForm({
         Optional: Zahlst du aktuell einen Aktionspreis, trage ihn oben als „Betrag“ ein und hier den
         regulären Preis samt Enddatum der Aktion. Ab dann wird automatisch mit dem regulären Preis
         gerechnet.
+      </p>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="contract_end" className={labelClass("contract_end")}>
+            Vertrag läuft bis
+          </Label>
+          <Input
+            id="contract_end"
+            name="contract_end"
+            type="date"
+            aria-invalid={invalid("contract_end")}
+            defaultValue={defaultValues?.contractEnd ?? ""}
+            onChange={(e) => setContractEnd(e.target.value)}
+          />
+          <FieldError message={errors.contract_end} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="notice_period" className={labelClass("notice_period")}>
+            Kündigungsfrist
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              id="notice_period"
+              name="notice_period"
+              type="number"
+              step="1"
+              min="0"
+              aria-invalid={invalid("notice_period")}
+              defaultValue={defaultValues?.noticePeriod ?? ""}
+              onChange={(e) => setNoticePeriod(e.target.value)}
+              placeholder="z. B. 3"
+              className="w-20"
+            />
+            <Select
+              name="notice_unit"
+              items={NOTICE_UNIT_OPTIONS}
+              value={noticeUnit}
+              onValueChange={(v) => setNoticeUnit(v ?? "months")}
+            >
+              <SelectTrigger
+                aria-label="Einheit der Kündigungsfrist"
+                className="min-w-0 flex-1"
+                aria-invalid={invalid("notice_unit")}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {NOTICE_UNIT_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <FieldError message={errors.notice_period} />
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Optional: Mit Vertragsende und Frist erinnert dich die App rechtzeitig unter
+        Benachrichtigungen, bevor sich der Vertrag verlängert.
+        {cancelBy && (
+          <>
+            {" "}
+            <span className="font-medium text-foreground">
+              Spätestens kündigen bis {new Date(cancelBy).toLocaleDateString("de-DE")}.
+            </span>
+          </>
+        )}
       </p>
 
       <div className="space-y-2">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cancelByDate } from "@/lib/contract";
 import { requireUser } from "@/lib/auth/guards";
 import { listSubscriptions, listVisibleCategories } from "@/lib/db/queries";
 import { Badge } from "@/components/ui/badge";
@@ -120,6 +121,14 @@ export default async function SubscriptionsListPage({
                     € · {INTERVAL_LABELS[sub.billingInterval] ?? sub.billingInterval}
                     {promoActive(sub, todayStr) &&
                       ` · Aktion bis ${new Date(sub.introUntil!).toLocaleDateString("de-DE")}`}
+                    {(() => {
+                      // Nur solange es noch etwas zu entscheiden gibt.
+                      const cancelBy = cancelByDate(sub.contractEnd, sub.noticePeriod, sub.noticeUnit);
+                      if (!cancelBy || sub.status === "cancelled" || sub.contractEnd! < todayStr) {
+                        return null;
+                      }
+                      return ` · kündigen bis ${new Date(cancelBy).toLocaleDateString("de-DE")}`;
+                    })()}
                     {sub.nextBillingDate && (
                       <span
                         className={

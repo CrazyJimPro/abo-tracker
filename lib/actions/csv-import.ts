@@ -13,12 +13,13 @@ import {
   updateSubscription,
   type SubscriptionValues,
 } from "@/lib/db/queries";
-import type { BillingInterval, SubscriptionStatus } from "@/lib/db/schema";
+import type { BillingInterval, NoticeUnit, SubscriptionStatus } from "@/lib/db/schema";
 import { CATEGORY_COLORS, validate } from "@/lib/subscription-validation";
 import {
   billingIntervalFromLabel,
   decodeCsvBytes,
   normalizeImportDate,
+  noticeUnitFromLabel,
   parseGermanDecimal,
   parseSubscriptionsCsv,
   statusFromLabel,
@@ -70,6 +71,12 @@ export async function importSubscriptionsCsv(
       const regularAmountRaw = (raw["Regulärer Preis"] ?? "").trim();
       const regularAmount = regularAmountRaw ? parseGermanDecimal(regularAmountRaw) : null;
       const introUntil = normalizeImportDate(raw["Aktionspreis gilt bis"] ?? "");
+      // Ältere Exporte haben diese Spalten noch nicht; dann bleiben sie leer.
+      const contractEnd = normalizeImportDate(raw["Vertrag läuft bis"] ?? "");
+      const noticePeriodRaw = (raw["Kündigungsfrist"] ?? "").trim();
+      const noticePeriod = noticePeriodRaw ? Number(noticePeriodRaw) : null;
+      const noticeUnit =
+        noticePeriod !== null ? noticeUnitFromLabel(raw["Kündigungsfrist Einheit"] ?? "") : null;
 
       const fields = {
         name,
@@ -81,6 +88,9 @@ export async function importSubscriptionsCsv(
         notes,
         regularAmount,
         introUntil,
+        contractEnd,
+        noticePeriod,
+        noticeUnit,
       };
 
       const validationError = validate(fields);
@@ -122,6 +132,9 @@ export async function importSubscriptionsCsv(
         notes: fields.notes,
         regularAmount: fields.regularAmount,
         introUntil: fields.introUntil,
+        contractEnd: fields.contractEnd,
+        noticePeriod: fields.noticePeriod,
+        noticeUnit: fields.noticeUnit as NoticeUnit | null,
       };
 
       // Ownership-safe upsert: getSubscription is scoped to (id, ownerId), so

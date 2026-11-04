@@ -8,6 +8,7 @@ import {
   decodeCsvBytes,
   encodeSubscriptionsToCsv,
   normalizeImportDate,
+  noticeUnitFromLabel,
   parseSubscriptionsCsv,
   type ExportRow,
 } from "./csv.ts";
@@ -23,6 +24,9 @@ const row: ExportRow = {
   nextBillingDate: "2026-10-01",
   regularAmount: 39.9,
   introUntil: "2026-12-31",
+  contractEnd: "2027-06-30",
+  noticePeriod: 3,
+  noticeUnit: "months",
   notes: "Kündigung; bestätigt",
 };
 
@@ -42,6 +46,15 @@ test("Export aus der App wird unverändert wieder gelesen", () => {
   assert.equal(raw["Nächste Abrechnung"], "2026-10-01");
   assert.equal(raw["Regulärer Preis"], "39,90");
   assert.equal(raw["Notizen"], "Kündigung; bestätigt");
+  assert.equal(raw["Vertrag läuft bis"], "2027-06-30");
+  assert.equal(raw["Kündigungsfrist"], "3");
+  assert.equal(noticeUnitFromLabel(raw["Kündigungsfrist Einheit"]), "months");
+});
+
+test("noticeUnitFromLabel", () => {
+  assert.equal(noticeUnitFromLabel("Wochen"), "weeks");
+  assert.equal(noticeUnitFromLabel(""), "months");
+  assert.equal(noticeUnitFromLabel("Jahre"), "Jahre");
 });
 
 test("Von Excel gespeicherte Datei (Windows-1252, ohne BOM, deutsches Datum)", () => {

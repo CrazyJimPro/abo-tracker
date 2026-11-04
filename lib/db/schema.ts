@@ -126,6 +126,12 @@ export const subscriptions = sqliteTable(
     notes: text("notes"),
     regularAmount: real("regular_amount"),
     introUntil: text("intro_until"),
+    // Vertragsende und Kündigungsfrist, beides freiwillig (lib/contract.ts
+    // rechnet daraus "kündigen bis"). Ohne CHECK-Constraints, damit die
+    // Migration ein reines ADD COLUMN bleibt — siehe users.aboStatusFilter.
+    contractEnd: text("contract_end"),
+    noticePeriod: integer("notice_period"),
+    noticeUnit: text("notice_unit").$type<NoticeUnit>(),
     ...timestamps,
   },
   (t) => [
@@ -182,6 +188,7 @@ export const priceHistory = sqliteTable(
 export type UserRole = "admin" | "member";
 export type BillingInterval = "weekly" | "monthly" | "quarterly" | "yearly";
 export type SubscriptionStatus = "active" | "paused" | "cancelled";
+export type NoticeUnit = "days" | "weeks" | "months";
 export type PriceHistorySource = "initial" | "auto" | "manual";
 
 export type User = typeof users.$inferSelect;

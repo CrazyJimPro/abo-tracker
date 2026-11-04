@@ -21,16 +21,16 @@ Seite.
 
 | | Windows | Linux |
 | --- | --- | --- |
-| **Installieren** | `AboTrackerSetup.exe` herunterladen und starten | einen Befehl im Terminal ausführen |
+| **Installieren** | `AboTrackerSetup.exe` herunterladen und starten | zwei Befehle ins Terminal kopieren |
 | **Programmordner** | `%LOCALAPPDATA%\Abo-Tracker` | `~/abo-tracker` |
 | **App öffnen** | Startmenü → *Abo-Tracker öffnen* | im Browser <http://localhost:3200> |
 | **Sicherung erstellen** | in der App: *Einstellungen → Sicherung erstellen* | in der App: *Einstellungen → Sicherung erstellen* |
-| **Sicherung zurückspielen** | beim Installieren, oder Startmenü → *Abo-Tracker wiederherstellen* | beim Installieren, oder `scripts/restore.sh` |
+| **Sicherung zurückspielen** | beim Installieren, oder Startmenü → *Abo-Tracker wiederherstellen* | beim Installieren, oder `~/abo-tracker/scripts/restore.sh` |
 | **Aktualisieren** | neue `AboTrackerSetup.exe` herunterladen und starten | denselben Befehl wie beim Installieren erneut ausführen |
-| **Deinstallieren** | *Einstellungen → Apps → Abo-Tracker* | `./installscript/uninstall.sh` |
+| **Deinstallieren** | *Einstellungen → Apps → Installierte Apps → Abo-Tracker* | `~/abo-tracker/installscript/uninstall.sh --keep-data` |
 
-Der Abo-Tracker läuft komplett auf deinem eigenen Rechner: ein kleiner
-Server und eine Datenbank-Datei. Es gibt keinen Cloud-Dienst und kein Konto
+Der Abo-Tracker läuft komplett auf deinem eigenen Rechner: ein kleines
+Programm im Hintergrund und eine Datenbank-Datei. Es gibt keinen Cloud-Dienst und kein Konto
 bei irgendeinem Anbieter. Für die Installation und für Updates braucht der
 Rechner eine Internetverbindung, im Betrieb nicht.
 
@@ -43,18 +43,25 @@ Rechner eine Internetverbindung, im Betrieb nicht.
    dir die Installation am Ende anzeigt.
    Das Passwort wird nur dieses eine Mal angezeigt. Notiere es dir sofort
    (unter Windows liegt es zusätzlich schon in der Zwischenablage).
-2. **Neues Passwort festlegen.** Die App verlangt das beim ersten Anmelden.
-3. **Loslegen:** Unter *Abos* das erste Abo anlegen. Acht Kategorien sind
+2. **Neues Passwort festlegen.** Die App verlangt das beim ersten Anmelden
+   (mindestens 8 Zeichen).
+3. **Loslegen:** Unter *Abos* auf **Neues Abo** klicken. Acht Kategorien sind
    schon vorhanden, eigene kannst du beim Anlegen eines Abos ergänzen.
+   Vergisst du ein Pflichtfeld, wird es rot umrandet, und alles andere, was du
+   schon eingetragen hast, bleibt stehen.
 4. **Weitere Personen** bekommen im Bereich *Admin* ein eigenes Konto. Jede
    Person sieht nur ihre eigenen Abos.
+5. **Erinnerungen einstellen:** Unter *Einstellungen → Benachrichtigungen*
+   legst du fest, wie viele Tage vorher die App an Abrechnungen und
+   Kündigungsfristen erinnert.
 
 Hast du bei der Installation eine Sicherung zurückgespielt, entfällt das
 vorläufige Passwort: Du meldest dich mit den Zugangsdaten aus der Sicherung
 an.
 
 Die App ist auch von anderen Geräten im selben Heimnetz erreichbar (Handy,
-Tablet), und zwar unter `http://<IP-Adresse-des-Rechners>:3200`.
+Tablet), und zwar unter `http://<IP-Adresse-des-Rechners>:3200`, zum
+Beispiel `http://192.168.1.20:3200`.
 
 ---
 
@@ -156,10 +163,10 @@ einfach kein Hinweis.
 3. **Prüfen:** Die App im Browser neu laden. Neben dem Schriftzug steht die
    neue Versionsnummer, und der Update-Hinweis ist verschwunden.
 
-Beim Update bleiben alle Abos, Konten und Passwörter erhalten. Nach
-**Sicherung zurückspielen** wird beim Update **nicht** gefragt: Das gibt es
-nur bei einer Erstinstallation (Linux) bzw. wird mit „Nein“ übersprungen
-(Windows).
+Beim Update bleiben alle Abos, Konten und Passwörter erhalten. Eine
+Sicherung spielst du dabei **nicht** ein: Unter Linux fragt das Update gar
+nicht danach, unter Windows lässt du im Installer „Nein, ohne Sicherung
+weiter“ stehen.
 
 ---
 
@@ -167,8 +174,13 @@ nur bei einer Erstinstallation (Linux) bzw. wird mit „Nein“ übersprungen
 
 Das funktioniert auch von Windows nach Linux und umgekehrt.
 
-1. Auf dem **alten** Rechner in der App **Sicherung erstellen** und die Datei
-   auf den neuen Rechner bringen (USB-Stick, Netzlaufwerk, Cloud …).
-2. Auf dem **neuen** Rechner den Abo-Tracker installieren und bei der Frage
-   nach einer Sicherung **Ja** sagen und die Datei auswählen.
-3. Mit den gewohnten Zugangsdaten anmelden. Fertig.
+1. Auf dem **alten** Rechner in der App **Sicherung erstellen** (siehe
+   [oben](#backup)).
+2. Die Datei auf den neuen Rechner bringen (USB-Stick, Netzlaufwerk,
+   Cloud …) und dort in den Ordner **Downloads** legen. Dann findet die
+   Installation sie von selbst.
+3. Auf dem **neuen** Rechner den Abo-Tracker installieren und bei der Frage
+   nach einer Sicherung **Ja** sagen: unter
+   [Windows](windows/README.md#schritt-4-daten-übernehmen) bzw.
+   [Linux](LINUX.md#schritt-4-die-fragen-beantworten).
+4. Mit den gewohnten Zugangsdaten anmelden. Fertig.

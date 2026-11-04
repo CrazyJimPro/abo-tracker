@@ -5,18 +5,29 @@ sehen, was das alles pro Monat kostet. Alle Daten bleiben bei dir: Die App
 läuft lokal mit einer SQLite-Datenbank, ohne Cloud-Dienst und ohne Konto bei
 irgendeinem Anbieter.
 
+Die **Startseite** (Klick auf den Schriftzug „Abo-Tracker“) zeigt, was alle
+aktiven Abos pro Monat und aufs Jahr gerechnet kosten, und was gekündigte
+und pausierte Abos im Monat und im Jahr einsparen.
+
 Im Reiter **Historie** lässt sich der Preisverlauf jedes Abos (aktiv wie
 gekündigt) einsehen, mit Vergleich „vor 12 Monaten vs. heute“, um
 Preiserhöhungen auf einen Blick zu erkennen. Preisänderungen werden beim
 Bearbeiten eines Abos automatisch erfasst, ältere Preise lassen sich von Hand
 nachtragen.
 
-Unter **Benachrichtigungen** erinnert die App an anstehende Abrechnungen,
+Unter **Benachrichtigungen** (Glocke oben rechts) erinnert die App an anstehende Abrechnungen,
 auslaufende Aktionspreise und Kündigungsfristen: Mit „Vertrag läuft bis“ und
 „Kündigungsfrist“ (beides freiwillig) rechnet sie aus, bis wann spätestens
 gekündigt werden muss. Wie viele Tage im Voraus erinnert wird, stellt jeder
 unter **Einstellungen** selbst ein (3, 7, 14 oder 30 Tage). Pro Abo lässt sich
-außerdem die Zahlungsart festhalten und die Abo-Liste danach filtern.
+außerdem die Zahlungsart festhalten (PayPal, Kreditkarte, Lastschrift,
+Überweisung/Rechnung, Sonstiges) und die Abo-Liste danach filtern.
+
+Beim Ausfüllen hilft die App mit: Fehlt in einem Formular etwas oder stimmt
+ein Wert nicht, wird das Feld rot umrandet und darunter steht, was fehlt.
+Alles bereits Eingetragene bleibt dabei stehen. Nach dem Speichern bestätigt
+eine kurze Meldung „Gespeichert“, und bevor ein Abo gelöscht wird, fragt die
+App noch einmal nach.
 
 ## Installation, Sicherung und Update
 

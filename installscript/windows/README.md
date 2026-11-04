@@ -1,8 +1,8 @@
 # Abo-Tracker unter Windows
 
-Anleitung für Windows 10 und 11. Was auf Windows und Linux gleich ist (was
-eine Sicherung ist, was beim Zurückspielen passiert, woran man ein Update
-erkennt), steht in der [allgemeinen Anleitung](../README.md).
+Anleitung für Windows 10 und 11, Schritt für Schritt. Was auf Windows und
+Linux gleich ist (was eine Sicherung ist, was beim Zurückspielen passiert),
+steht in der [allgemeinen Anleitung](../README.md).
 
 - [Erstinstallation](#erstinstallation)
 - [Im Alltag](#im-alltag)
@@ -13,87 +13,166 @@ erkennt), steht in der [allgemeinen Anleitung](../README.md).
 - [Wenn etwas nicht klappt](#wenn-etwas-nicht-klappt)
 - [Technische Details](#technische-details)
 
+> **Gut zu wissen:** Die Fragen im Installer sind auf Deutsch, die Knöpfe
+> unten rechts aber auf Englisch:
+>
+> | Knopf | heißt |
+> | --- | --- |
+> | **Next** | Weiter |
+> | **Back** | Zurück |
+> | **Browse…** | Durchsuchen |
+> | **Install** | Installieren |
+> | **Finish** | Fertigstellen |
+
 ---
 
 ## Erstinstallation
 
-**Du brauchst:** Windows 10 oder 11 (64 Bit) und eine Internetverbindung.
-Administratorrechte sind nicht nötig. Node.js oder andere Programme musst du
-nicht vorher installieren, der Installer bringt alles mit.
+**Du brauchst:** Windows 10 oder 11 und Internet. Sonst nichts: keine
+Administratorrechte, keine anderen Programme. Alles, was der Abo-Tracker
+braucht, holt sich der Installer selbst.
 
-1. **Installer herunterladen:**
-   <https://github.com/CrazyJimPro/abo-tracker/releases/latest/download/AboTrackerSetup.exe>
+### Schritt 1: Installer herunterladen
 
-2. **`AboTrackerSetup.exe` starten** (Doppelklick).
-   Zeigt Windows „Der Computer wurde durch Windows geschützt“, auf
-   **Weitere Informationen** und dann **Trotzdem ausführen** klicken. Die
-   Warnung kommt, weil der Installer nicht kostenpflichtig signiert ist.
+Klicke auf diesen Link:
+<https://github.com/CrazyJimPro/abo-tracker/releases/latest/download/AboTrackerSetup.exe>
 
-3. **Zielordner:** Den Vorschlag (`%LOCALAPPDATA%\Abo-Tracker`) übernehmen und
-   auf **Weiter** klicken.
+Der Browser speichert die Datei `AboTrackerSetup.exe` in deinem Ordner
+**Downloads**.
 
-4. **Daten übernehmen:**
-   - **Neuer Start ohne alte Daten:** „Nein, ohne Sicherung weiter“ lassen.
-   - **Du hast eine Sicherung** (z. B. von einem anderen Rechner):
-     „Ja, Daten aus einer Sicherung übernehmen“ wählen. Auf der nächsten
-     Seite über **Durchsuchen …** die Sicherungsdatei auswählen (`.db`). Liegt
-     schon eine im Download-Ordner oder in `abo-backup` auf dem Desktop, ist
-     die neueste bereits eingetragen.
+> Meldet Microsoft Edge, die Datei werde „nicht häufig heruntergeladen“:
+> Mit der Maus auf die Meldung zeigen, auf die drei Punkte **…** klicken,
+> dann **Beibehalten**, dann **Mehr anzeigen** und **Trotzdem beibehalten**.
 
-5. **Admin-Zugang:** Deine E-Mail-Adresse eingeben. Damit meldest du dich
-   später an. Diese Seite erscheint nicht, wenn du eine Sicherung übernimmst,
-   denn dann kommen die Konten aus der Sicherung.
+### Schritt 2: Installer starten
 
-6. **Installieren** klicken. Ein schwarzes Fenster zeigt den Fortschritt. Das
-   dauert meist **2–5 Minuten**. Das Fenster bitte nicht schließen.
+1. Den Ordner **Downloads** öffnen: **Windows-Taste + E** drücken und links
+   auf **Downloads** klicken.
+2. Doppelklick auf **AboTrackerSetup**.
 
-7. **Am Ende** erscheint ein Fenster mit deinem **vorläufigen Passwort**. Es
-   ist schon in der Zwischenablage, du kannst es also direkt mit **Strg+V**
-   einfügen. Es wird nirgends noch einmal angezeigt.
-   Hast du eine Sicherung übernommen, meldet das Fenster stattdessen, wie
-   viele Konten und Abos eingespielt wurden. Dann gilt dein altes Passwort.
+Erscheint ein blaues Fenster **„Der Computer wurde durch Windows
+geschützt“**, ist das normal: Der Installer hat keine kostenpflichtige
+Unterschrift. Auf **Weitere Informationen** klicken, dann auf **Trotzdem
+ausführen**.
 
-8. Der Browser öffnet sich mit <http://localhost:3200>. Anmelden und dem
-   neuen Passwort folgen, siehe
-   [Nach der ersten Installation](../README.md#nach-der-ersten-installation).
+### Schritt 3: Ordner
 
-Beim ersten Start fragt eventuell die **Windows-Firewall** nach. Mit
-„Zulassen“ ist die App auch vom Handy im Heimnetz erreichbar. Brauchst du das
-nicht, kannst du ablehnen, am Rechner selbst funktioniert sie trotzdem.
+Seite *Select Destination Location*: Nichts ändern, auf **Next** klicken.
+
+### Schritt 4: Daten übernehmen
+
+Seite *Daten übernehmen*. Hier gibt es zwei Möglichkeiten:
+
+- **Du benutzt den Abo-Tracker zum ersten Mal:** Der obere Punkt
+  *„Nein, ohne Sicherung weiter“* ist schon ausgewählt. Einfach auf
+  **Next** klicken.
+- **Du hast eine Sicherung** (zum Beispiel vom alten Rechner):
+  1. *„Ja, Daten aus einer Sicherung übernehmen“* anklicken, dann **Next**.
+  2. Seite *Sicherung auswählen*: Steht im Feld schon eine Datei, ist das
+     deine neueste Sicherung. Dann einfach **Next**.
+  3. Ist das Feld leer oder steht die falsche Datei darin: auf **Browse…**
+     klicken, die Sicherung suchen (sie heißt zum Beispiel
+     `abo-tracker-2026-09-19.db`), anklicken, **Öffnen**, dann **Next**.
+
+> **Tipp:** Lege die Sicherung vorher in deinen Ordner **Downloads**. Dann
+> trägt der Installer sie von selbst ein.
+
+### Schritt 5: E-Mail-Adresse
+
+Seite *Admin-Zugang*: Deine E-Mail-Adresse in das Feld tippen und auf
+**Next** klicken. Mit dieser Adresse meldest du dich später an.
+
+Hast du in Schritt 4 eine Sicherung gewählt, kommt diese Seite nicht. Die
+Anmeldedaten stecken dann schon in der Sicherung.
+
+### Schritt 6: Installieren
+
+Seite *Ready to Install*: auf **Install** klicken.
+
+Jetzt öffnet sich ein **schwarzes Fenster**, in dem viel Text durchläuft.
+Das ist richtig so. **Das Fenster nicht schließen**, einfach warten. Das
+dauert meist **2 bis 5 Minuten**. Danach geht es von selbst zu.
+
+### Schritt 7: Passwort aufschreiben
+
+Wenn das schwarze Fenster weg ist, passieren zwei Dinge:
+
+- Der **Browser** öffnet sich mit der Anmeldeseite des Abo-Trackers.
+- Der Installer zeigt ein kleines Fenster **„Abo-Tracker ist eingerichtet.“**
+  mit deinem **Login** und einem **vorläufigen Passwort**.
+
+**Schreib dir das Passwort jetzt auf.** Es wird nie wieder angezeigt. Es
+liegt außerdem schon in der Zwischenablage, du kannst es also gleich mit
+**Strg+V** einfügen. Dann auf **OK** und danach auf **Finish** klicken.
+
+Siehst du das kleine Fenster nicht, liegt es hinter dem Browser. Klicke unten
+in der Taskleiste auf das Symbol des Installers.
+
+Hast du in Schritt 4 eine Sicherung gewählt, steht im Fenster stattdessen
+**„Die Sicherung wurde eingespielt.“** und wie viele Konten und Abos
+übernommen wurden. Dann gilt dein altes Passwort. **OK**, dann **Finish**.
+
+### Schritt 8: Anmelden
+
+Im Browser (Adresse <http://localhost:3200>):
+
+1. Bei **E-Mail** deine Adresse eintragen, bei **Passwort** das Passwort aus
+   Schritt 7 (Strg+V). Auf **Anmelden** klicken.
+2. Es erscheint *Passwort ändern*. Zweimal ein neues Passwort eintippen
+   (mindestens 8 Zeichen) und auf **Passwort ändern** klicken. Ab jetzt gilt
+   dieses Passwort.
+
+**Fertig!** Jetzt kannst du unter **Abos** dein erstes Abo anlegen. Wie es
+weitergeht (weitere Personen anlegen usw.), steht unter
+[Nach der ersten Installation](../README.md#nach-der-ersten-installation).
+
+**Windows-Firewall:** Fragt Windows beim ersten Start nach, darfst du dir
+aussuchen: **Zugriff zulassen**, wenn du den Abo-Tracker auch vom Handy aus
+nutzen willst, sonst **Abbrechen**. Am Rechner selbst funktioniert er in
+beiden Fällen.
 
 ---
 
 ## Im Alltag
 
-Der Server startet **automatisch, sobald du dich bei Windows anmeldest**. Du
-musst nichts weiter tun, einfach den Browser öffnen.
+Du musst nichts starten. Der Abo-Tracker startet **von selbst, sobald du dich
+bei Windows anmeldest**.
 
-Im **Startmenü** unter *Abo-Tracker* findest du:
+**So öffnest du ihn:** Auf den **Start**-Knopf klicken, `Abo-Tracker`
+eintippen und **Abo-Tracker öffnen** anklicken. Oder im Browser die Adresse
+<http://localhost:3200> aufrufen. Am besten gleich ein Lesezeichen anlegen.
+
+Im **Startmenü** unter *Abo-Tracker* gibt es außerdem:
 
 | Eintrag | Wozu |
 | --- | --- |
-| **Abo-Tracker öffnen** | öffnet die App im Browser (und startet den Server, falls er nicht läuft) |
-| **Abo-Tracker starten** / **stoppen** | Server von Hand starten bzw. anhalten |
+| **Abo-Tracker öffnen** | öffnet die App im Browser (und startet sie, falls sie nicht läuft) |
+| **Abo-Tracker starten** / **stoppen** | App von Hand starten bzw. anhalten |
 | **Abo-Tracker sichern** | legt eine Sicherung auf dem Desktop ab, siehe unten |
-| **Abo-Tracker wiederherstellen** | spielt eine Sicherung zurück, die du in einem Fenster auswählst, siehe unten |
+| **Abo-Tracker wiederherstellen** | spielt eine Sicherung zurück, siehe unten |
 | **Deinstallieren** | entfernt den Abo-Tracker |
 
 ---
 
 ## Sicherung erstellen
 
-**Empfohlen:** in der App unter **Einstellungen → Sicherung erstellen**. Die
-Datei landet in deinem Download-Ordner. Näheres dazu in der
+Mach ab und zu eine Sicherung, und immer vor einem Update. Dafür musst du
+Admin sein, sonst siehst du die Karte nicht.
+
+1. Den Abo-Tracker öffnen und oben auf **Einstellungen** klicken.
+2. In der Karte **Sicherung** auf **Sicherung erstellen** klicken.
+3. Der Browser speichert die Datei `abo-tracker-<Datum>.db` in deinem Ordner
+   **Downloads**.
+4. Die Datei an einen sicheren Ort kopieren, zum Beispiel auf einen
+   USB-Stick.
+
+**Oder über das Startmenü:** *Abo-Tracker sichern*. Das legt die Sicherung im
+Ordner **`abo-backup`** auf deinem Desktop ab und zeigt am Ende ein Fenster
+mit dem Ergebnis. Dort bleiben die **letzten 10** Sicherungen liegen, ältere
+werden automatisch gelöscht.
+
+Beides geht, während der Abo-Tracker läuft. Mehr dazu in der
 [allgemeinen Anleitung](../README.md#backup).
-
-**Alternativ über das Startmenü:** *Abo-Tracker sichern*. Das legt die
-Sicherung im Ordner **`abo-backup`** auf deinem Desktop ab
-(`abo-tracker-<Datum>.db`) und zeigt am Ende ein Fenster mit dem Ergebnis.
-Es bleiben die **letzten 10** Sicherungen liegen, ältere werden automatisch
-gelöscht. Nutzt du OneDrive, landet der Ordner auf dem Desktop, den du
-tatsächlich siehst.
-
-Beides funktioniert, während der Abo-Tracker läuft.
 
 ---
 
@@ -101,93 +180,119 @@ Beides funktioniert, während der Abo-Tracker läuft.
 
 ### Bei der Installation
 
-Auf der Installer-Seite **Daten übernehmen** „Ja“ wählen und die
-Sicherungsdatei auswählen, siehe [Erstinstallation](#erstinstallation),
-Schritt 4. Das geht auch über eine bestehende Installation: Die bisherige
-Datenbank wird dann vorher auf dem Desktop gesichert, der Installer fragt
-dafür noch einmal nach.
+Im Installer auf der Seite *Daten übernehmen* „Ja“ wählen, siehe
+[Erstinstallation, Schritt 4](#schritt-4-daten-übernehmen). Das ist der
+richtige Weg für einen neuen Rechner.
 
-### In einer bestehenden Installation
+### Wenn der Abo-Tracker schon installiert ist
 
-1. Startmenü → **Abo-Tracker wiederherstellen**.
-2. Es öffnet sich das gewohnte Windows-Fenster **„Datei öffnen“**. Navigiere
-   zu deiner Sicherung, egal wo sie liegt (USB-Stick, Dokumente, Netzlaufwerk
-   …), wähle sie aus und klicke **Öffnen**. Liegt schon eine im
-   Download-Ordner oder in `abo-backup` auf dem Desktop, ist die neueste davon
-   bereits ausgewählt.
-3. Ein Fenster zeigt Datei, Ordner und Datum der Sicherung und fragt, ob sie
-   eingespielt werden soll. **Ja** klicken.
+Zum Beispiel, wenn du aus Versehen etwas gelöscht hast:
+
+1. Auf den **Start**-Knopf klicken, `Abo-Tracker wiederherstellen` eintippen
+   und anklicken.
+2. Es öffnet sich das Fenster *Sicherung zum Zurückspielen auswählen*. Ist
+   schon eine Datei ausgewählt, ist das deine neueste Sicherung aus
+   **Downloads** oder `abo-backup`. Sonst die Sicherung suchen (USB-Stick,
+   Dokumente …) und anklicken. Dann auf **Öffnen** klicken.
+3. Ein Fenster zeigt, welche Sicherung eingespielt wird. Auf **Ja** klicken.
 4. Nach ein paar Sekunden meldet ein Fenster, wie viele Konten und Abos
-   eingespielt wurden. Der Server wurde dabei kurz angehalten und läuft
-   wieder. Das schwarze Fenster im Hintergrund kannst du danach schließen.
+   zurückgekommen sind. **OK** klicken. Das schwarze Fenster im Hintergrund
+   kannst du danach mit dem **X** oben rechts schließen.
+5. Im Browser die Seite neu laden (**F5**).
 
-**Abbrechen** bzw. **Nein** ändert nichts. Ist die Datei keine gültige
-Sicherung, sagt ein Fenster, warum, und deine Daten bleiben unverändert.
+**Abbrechen** oder **Nein** ändert nichts. Ist die Datei keine richtige
+Sicherung, sagt dir ein Fenster das, und deine Daten bleiben, wie sie sind.
 
-Für Fortgeschrittene geht es auch ohne Fenster, direkt in PowerShell:
+Deine Daten von vorher gehen nicht verloren: Sie werden vorher als
+`vor-wiederherstellung-<Datum>.db` im Ordner `abo-backup` auf dem Desktop
+abgelegt. Die Passwörter kommen mit dem Stand der Sicherung zurück, mehr dazu
+in der [allgemeinen Anleitung](../README.md#restore).
+
+Für Fortgeschrittene geht es auch ohne Fenster, in PowerShell:
 
 ```powershell
 cd $env:LOCALAPPDATA\Abo-Tracker
 installscript\windows\restore.ps1 -From "D:\Sicherungen\abo-tracker-2026-09-19.db"
 ```
 
-Was dabei passiert und was du danach beachten solltest (z. B. dass die
-Passwörter vom Zeitpunkt der Sicherung zurückkommen), steht in der
-[allgemeinen Anleitung](../README.md#restore).
-
 ---
 
 ## Update
 
-Zeigt die App **„Update verfügbar“** an:
+Steht oben im Abo-Tracker **„Update verfügbar“**, gibt es eine neue Version.
+Deine Abos, Konten und Passwörter bleiben beim Update erhalten.
 
-1. **Sicherung erstellen**: in der App *Einstellungen → Sicherung erstellen*.
-2. **Neuen Installer herunterladen:** auf den Hinweis „Update verfügbar“
-   klicken, auf der GitHub-Seite unten bei *Assets* auf
-   **AboTrackerSetup.exe** klicken. Oder direkt:
+1. **Sicherung erstellen**, wie oben unter
+   [Sicherung erstellen](#sicherung-erstellen) beschrieben. Nur zur
+   Sicherheit.
+2. **Neuen Installer herunterladen** über diesen Link:
    <https://github.com/CrazyJimPro/abo-tracker/releases/latest/download/AboTrackerSetup.exe>
-3. **`AboTrackerSetup.exe` starten** und durchklicken:
-   - Zielordner: unverändert lassen.
-   - Daten übernehmen: **„Nein, ohne Sicherung weiter“**. Deine vorhandenen
-     Daten bleiben erhalten.
-   - Die Frage nach der E-Mail entfällt beim Update.
-4. Das schwarze Fenster läuft wieder ein paar Minuten durch. Der Server wird
-   dabei automatisch angehalten und neu gestartet.
-5. Browser neu laden. Die neue Versionsnummer steht oben neben dem Schriftzug,
-   der Update-Hinweis ist weg.
-
-Bitte immer die **neue** `AboTrackerSetup.exe` herunterladen. Eine ältere
-bringt die App zwar auch auf den neuesten Stand, neue Einträge im Startmenü
-und die richtige Versionsnummer unter *Apps* kommen aber nur mit dem neuen
-Installer.
+   Bitte immer frisch herunterladen, nicht eine alte Datei wiederverwenden.
+3. **Starten:** Im Ordner **Downloads** doppelt auf die neue
+   **AboTrackerSetup** klicken. Kommt das blaue Windows-Fenster, wieder
+   **Weitere Informationen** und **Trotzdem ausführen**.
+4. Seite *Daten übernehmen*: **„Nein, ohne Sicherung weiter“** lassen und
+   auf **Next** klicken. Bitte hier **nicht „Ja“** wählen, sonst werden deine
+   aktuellen Daten durch die alte Sicherung ersetzt.
+   (Kommt vorher die Seite mit dem Ordner, nichts ändern und **Next**. Die
+   Frage nach der E-Mail kommt beim Update nicht.)
+5. Seite *Ready to Install*: **Install** klicken. Das schwarze Fenster läuft
+   wieder ein paar Minuten. Nicht schließen, einfach warten.
+6. Ein Passwort-Fenster kommt diesmal nicht. Auf **Finish** klicken.
+7. Im Browser die Seite neu laden (**F5**). Oben neben „Abo-Tracker“ steht
+   jetzt die neue Versionsnummer, und „Update verfügbar“ ist verschwunden.
 
 ---
 
 ## Deinstallation
 
-**Einstellungen → Apps → Installierte Apps → Abo-Tracker → Deinstallieren**
-(oder Startmenü → *Abo-Tracker* → *Deinstallieren*).
+Der Abo-Tracker lässt sich ganz entfernen. Keine Sorge um deine Daten: Der
+Deinstaller fragt vorher, ob er sie auf den Desktop retten soll.
 
-Der Deinstaller hält den Server an, entfernt den Autostart und löscht den
-kompletten Programmordner, **einschließlich deiner Daten**. Vorher fragt er,
-ob eine Kopie der Datenbank auf dem Desktop abgelegt werden soll (Ordner
-`abo-tracker-backup-<Datum>`). Sag **Ja**, wenn du die Daten noch brauchst.
-Die Datei `abo-tracker.db` in diesem Ordner kannst du später beim
-Installieren als Sicherung auswählen.
+1. Auf den **Start**-Knopf klicken, dann auf **Einstellungen** (das Zahnrad).
+2. Links auf **Apps**, dann auf **Installierte Apps**.
+   (Windows 10: **Apps**, dann **Apps & Features**.)
+3. In das Suchfeld `Abo-Tracker` eintippen.
+4. Rechts neben *Abo-Tracker* auf die drei Punkte **…** klicken, dann auf
+   **Deinstallieren**, und noch einmal auf **Deinstallieren**.
+   (Windows 10: auf *Abo-Tracker* klicken, dann zweimal **Deinstallieren**.)
+5. Die englische Frage *„Are you sure you want to completely remove
+   Abo-Tracker …?“* mit **Ja** (bzw. **Yes**) beantworten.
+6. Die Frage *„Soll vorher eine Kopie auf dem Desktop abgelegt werden?“* mit
+   **Ja** beantworten. Ein schwarzes Fenster blitzt kurz auf.
+7. Zum Schluss meldet ein Fenster, dass der Abo-Tracker entfernt wurde.
+   **OK** klicken.
+
+**Deine Daten** liegen danach auf dem Desktop im Ordner
+`abo-tracker-backup-<Datum>`, darin die Datei `abo-tracker.db`. Heb diesen
+Ordner gut auf. Installierst du den Abo-Tracker später wieder, wählst du
+diese Datei in [Schritt 4](#schritt-4-daten-übernehmen) als Sicherung aus.
+
+Hast du in Schritt 6 **Nein** gesagt, sind alle Abos und Konten endgültig
+weg.
+
+Der Abo-Tracker lässt sich genauso über das Startmenü entfernen:
+*Abo-Tracker* → *Deinstallieren*, weiter ab Schritt 5.
 
 ---
 
 ## Wenn etwas nicht klappt
 
+Viele Lösungen unten erwähnen den **Programmordner**. So öffnest du ihn:
+**Windows-Taste + R** drücken, `%LOCALAPPDATA%\Abo-Tracker` eintippen und
+**Enter** drücken.
+
 | Problem | Lösung |
 | --- | --- |
-| Die App lädt nicht im Browser | Startmenü → *Abo-Tracker öffnen*, das startet den Server bei Bedarf. |
-| Installation bricht ab | Im Programmordner `%LOCALAPPDATA%\Abo-Tracker` liegt `install.log` mit der kompletten Ausgabe, auch wenn das Fenster schon zu ist. Die Datei hilft bei der Fehlersuche. |
-| Server startet nicht | `prod-server.err.log` im Programmordner nennt den Grund. |
-| Passwort vergessen | Eine andere Person mit Admin-Rechten setzt es im Bereich *Admin* zurück. Das vorläufige Passwort steht absichtlich nirgends gespeichert, auch nicht in `install.log`. |
-| Nach einem Windows-Update startet der Server nicht mehr automatisch | Den Installer erneut ausführen (wie beim [Update](#update)), das richtet den Autostart neu ein. |
-| „Port 3200 ist belegt“ | Ein anderes Programm nutzt denselben Port. `installscript\windows\start-prod.ps1 -Port 3300` startet auf einem anderen. |
-| App nur auf diesem Rechner nutzen, keine Firewall-Abfrage | `installscript\windows\start-prod.ps1 -BindHost 127.0.0.1` |
+| Der Browser zeigt „Seite nicht erreichbar“ | Startmenü → *Abo-Tracker öffnen*. Das startet die App, falls sie nicht läuft. |
+| Das Passwort-Fenster nach der Installation ist nicht zu sehen | Es liegt hinter dem Browser: unten in der Taskleiste auf das Symbol des Installers klicken. |
+| Vorläufiges Passwort nicht aufgeschrieben, noch nie angemeldet | Den Abo-Tracker [deinstallieren](#deinstallation) (bei der Frage nach der Kopie **Nein**, es gibt ja noch keine Daten) und neu [installieren](#erstinstallation). Dann gibt es ein neues Passwort. |
+| Passwort vergessen | Eine andere Person mit Admin-Rechten setzt es im Bereich *Admin* zurück. Das vorläufige Passwort ist absichtlich nirgends gespeichert. |
+| Die Installation bricht ab | Im Programmordner liegt die Datei `install.log` mit allem, was im schwarzen Fenster stand. Sie hilft bei der Fehlersuche. |
+| Die App startet nicht | Die Datei `prod-server.err.log` im Programmordner nennt den Grund. |
+| Nach einem Windows-Update startet die App nicht mehr von selbst | Den Installer noch einmal ausführen, genau wie beim [Update](#update). Das richtet den Autostart neu ein. |
+| „Port 3200 ist belegt“ | Ein anderes Programm benutzt denselben Port. In PowerShell im Programmordner: `installscript\windows\start-prod.ps1 -Port 3300`, dann <http://localhost:3300> öffnen. |
+| App nur auf diesem Rechner nutzen, ohne Firewall-Frage | In PowerShell im Programmordner: `installscript\windows\start-prod.ps1 -BindHost 127.0.0.1` |
 
 ---
 

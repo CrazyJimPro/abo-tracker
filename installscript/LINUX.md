@@ -1,10 +1,11 @@
 # Abo-Tracker unter Linux
 
-Anleitung für Linux mit Desktop (z. B. Ubuntu, Debian, Linux Mint). Was auf
-Windows und Linux gleich ist (was eine Sicherung ist, was beim Zurückspielen
-passiert, woran man ein Update erkennt), steht in der
+Anleitung für Linux mit Desktop (z. B. Ubuntu, Debian, Linux Mint), Schritt
+für Schritt. Was auf Windows und Linux gleich ist (was eine Sicherung ist,
+was beim Zurückspielen passiert), steht in der
 [allgemeinen Anleitung](README.md).
 
+- [Das Terminal in 1 Minute](#das-terminal-in-1-minute)
 - [Erstinstallation](#erstinstallation)
 - [Im Alltag](#im-alltag)
 - [Sicherung erstellen](#sicherung-erstellen)
@@ -16,74 +17,143 @@ passiert, woran man ein Update erkennt), steht in der
 
 ---
 
+## Das Terminal in 1 Minute
+
+Unter Linux installierst du den Abo-Tracker über das **Terminal**. Das ist
+ein Fenster, in das man Befehle schreibt. Du musst nichts selbst tippen, nur
+Befehle von dieser Seite hineinkopieren.
+
+| Was | So geht's |
+| --- | --- |
+| **Terminal öffnen** | **Strg + Alt + T** drücken. Klappt das nicht: im Anwendungsmenü nach `Terminal` suchen und anklicken. |
+| **Befehl kopieren** | In den grauen Kästen auf dieser Seite auf das Kopier-Symbol oben rechts klicken. Oder den Befehl mit der Maus markieren und **Strg + C** drücken. |
+| **Befehl einfügen** | Im Terminal **Strg + Umschalt + V** drücken (nur Strg + V geht im Terminal nicht). Oder mit der rechten Maustaste ins Terminal klicken und **Einfügen** wählen. |
+| **Befehl ausführen** | **Enter** drücken. |
+| **Fertig?** | Wenn wieder eine Zeile erscheint, die mit `$` endet, ist der Befehl fertig. |
+| **Text aus dem Terminal kopieren** | Mit der Maus markieren, dann **Strg + Umschalt + C**. |
+
+**Fragen mit `[J/n]` oder `[j/N]`:** Der Großbuchstabe ist die Antwort, die
+genommen wird, wenn du einfach **Enter** drückst. `[J/n]` + Enter heißt also
+„Ja“, `[j/N]` + Enter heißt „Nein“. Willst du die andere Antwort, tippst du
+den Buchstaben (`j` oder `n`) und dann Enter.
+
+---
+
 ## Erstinstallation
 
-**Du brauchst:** eine Internetverbindung sowie `git` und `curl`. Fehlen die
-beiden, installierst du sie so (Ubuntu/Debian/Mint):
+**Du brauchst:** Internet und das Passwort, mit dem du dich am Rechner
+anmeldest (nur für Schritt 2).
+
+### Schritt 1: Terminal öffnen
+
+**Strg + Alt + T** drücken.
+
+### Schritt 2: Zwei Helfer installieren
+
+Diesen Befehl kopieren, im Terminal einfügen und **Enter** drücken:
 
 ```bash
-sudo apt install git curl
+sudo apt install -y git curl
 ```
 
-Node.js musst du nicht vorher installieren, die Installation bietet das
-selbst an. Administratorrechte (`sudo`) braucht die Installation nicht.
+Das Terminal fragt nach deinem Passwort. Tippe das Passwort, mit dem du dich
+am Rechner anmeldest, und drücke **Enter**.
 
-**1. Terminal öffnen und diesen Befehl einfügen:**
+> **Beim Tippen des Passworts siehst du nichts, nicht einmal Sternchen.** Das
+> ist normal. Einfach blind tippen und Enter drücken.
+
+Warten, bis wieder die Zeile mit `$` erscheint. Steht dort „ist schon die
+neueste Version“, waren die Helfer schon da. Auch gut.
+
+### Schritt 3: Abo-Tracker installieren
+
+Diesen Befehl kopieren, im Terminal einfügen und **Enter** drücken:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/CrazyJimPro/abo-tracker/main/installscript/bootstrap.sh | bash
 ```
 
-Das lädt den Abo-Tracker nach `~/abo-tracker` und startet die Installation.
+Das lädt den Abo-Tracker in den Ordner `abo-tracker` in deinem persönlichen
+Ordner und startet die Installation.
 
-**2. Die Fragen beantworten.** Die Installation fragt unterwegs nur, was sie
-wissen muss:
+### Schritt 4: Die Fragen beantworten
 
-| Frage | Was du antwortest |
+Unterwegs stellt die Installation ein paar Fragen. Fast immer reicht
+**Enter**:
+
+| Frage im Terminal | Was du machst |
 | --- | --- |
-| *Node 24 über nvm installieren?* (nur wenn Node fehlt oder zu alt ist) | **Enter** (= ja) |
-| *Konten und Abos aus einer Sicherung wiederherstellen? [j/N]* | **Enter** für einen Neuanfang. **j**, wenn du eine Sicherung übernehmen willst, siehe unten. |
-| *E-Mail für den Admin-Zugang* (nicht bei übernommener Sicherung) | deine E-Mail-Adresse, damit meldest du dich später an |
-| *Server nach jedem Neustart automatisch starten?* | **Enter** (= ja) |
+| *Node 24 über nvm installieren (lädt aus dem Internet)? [J/n]* (kommt nicht immer) | **Enter** |
+| *Konten und Abos aus einer Sicherung wiederherstellen? [j/N]* | Zum ersten Mal: **Enter**. Hast du eine Sicherung: `j` und **Enter**, siehe unten. |
+| *E-Mail für den Admin-Zugang:* | Deine E-Mail-Adresse tippen, dann **Enter**. Damit meldest du dich später an. (Kommt nicht, wenn du eine Sicherung übernimmst.) |
+| *Server nach jedem Neustart automatisch starten? [J/n]* | **Enter** |
 
-**Sicherung übernehmen:** Nach **j** fragt die Installation nach dem Pfad
-zur Sicherungsdatei. Die **Tab-Taste** vervollständigt Ordner- und
-Dateinamen, `~` steht für deinen Home-Ordner, z. B.
-`~/Sicherungen/abo-tracker-2026-09-19.db`. Liegt schon eine Sicherung im
-Download-Ordner oder in `abo-backup` auf dem Schreibtisch, wird sie als
-Vorschlag angezeigt und mit Enter übernommen. Bei einem Tippfehler fragt die
-Installation noch einmal, eine leere Eingabe bricht ab (dann geht es ohne
-Sicherung weiter).
+**Du hast eine Sicherung?** Am einfachsten geht es so:
 
-**3. Warten.** Die Installation dauert meist **3–5 Minuten**.
+1. **Vor** Schritt 3 die Sicherungsdatei (zum Beispiel
+   `abo-tracker-2026-09-19.db`) in deinen Ordner **Downloads** legen.
+2. Bei der Frage nach der Sicherung `j` und **Enter**.
+3. Die Installation zeigt dann *Vorschlag (Enter): …* mit deiner Datei. Noch
+   einmal **Enter** drücken. Fertig.
 
-**4. Am Ende** stehen im Terminal die Adresse der App und dein **vorläufiges
-Passwort**. Es wird nur dieses eine Mal angezeigt, also gleich notieren. Hast
-du eine Sicherung übernommen, steht dort stattdessen „bestehendes Passwort“.
-Der Browser öffnet sich mit <http://localhost:3200>. Anmelden und dem neuen
-Passwort folgen, siehe
+Liegt die Datei woanders, tippst du bei *Pfad zur Sicherung* den Weg dorthin,
+zum Beispiel `~/Sicherungen/abo-tracker-2026-09-19.db` (`~` ist dein
+persönlicher Ordner). Die **Tab**-Taste ergänzt angefangene Ordner- und
+Dateinamen. Stimmt der Weg nicht, fragt die Installation noch einmal. Drückst
+du dann nur **Enter**, geht es ohne Sicherung weiter.
+
+### Schritt 5: Warten
+
+Jetzt läuft viel Text durch. Das ist richtig so. **Das Terminal nicht
+schließen**, einfach warten. Das dauert meist **3 bis 5 Minuten**.
+
+### Schritt 6: Passwort aufschreiben
+
+Am Ende steht im Terminal **„Fertig.“** und darunter:
+
+- **App:** die Adresse, <http://localhost:3200>
+- **Login:** deine E-Mail-Adresse
+- **Passwort:** dein **vorläufiges Passwort**
+
+**Schreib dir das Passwort jetzt auf.** Es wird nie wieder angezeigt. (Oder
+mit der Maus markieren und mit Strg + Umschalt + C kopieren.)
+
+Hast du eine Sicherung übernommen, steht dort stattdessen
+*„(bestehendes Passwort)“*. Dann gilt dein altes Passwort.
+
+Gleichzeitig öffnet sich der **Browser** mit der Anmeldeseite. Das Terminal
+kannst du jetzt schließen.
+
+### Schritt 7: Anmelden
+
+Im Browser (Adresse <http://localhost:3200>):
+
+1. Bei **E-Mail** deine Adresse eintragen, bei **Passwort** das Passwort aus
+   Schritt 6. Auf **Anmelden** klicken.
+2. Es erscheint *Passwort ändern*. Zweimal ein neues Passwort eintippen
+   (mindestens 8 Zeichen) und auf **Passwort ändern** klicken. Ab jetzt gilt
+   dieses Passwort.
+
+**Fertig!** Jetzt kannst du unter **Abos** dein erstes Abo anlegen. Wie es
+weitergeht (weitere Personen anlegen usw.), steht unter
 [Nach der ersten Installation](README.md#nach-der-ersten-installation).
-
-Wer die Installation ohne Rückfragen braucht (z. B. in einem Skript):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/CrazyJimPro/abo-tracker/main/installscript/bootstrap.sh \
-  | bash -s -- --email ich@example.com -y
-```
 
 ---
 
 ## Im Alltag
 
-Mit Autostart startet der Server **automatisch, sobald du dich am Desktop
-anmeldest**. Einfach den Browser öffnen: <http://localhost:3200>.
+Du musst nichts starten. Der Abo-Tracker startet **von selbst, sobald du dich
+am Rechner anmeldest**.
 
-Von Hand, jeweils im Terminal:
+**So öffnest du ihn:** im Browser die Adresse <http://localhost:3200>
+aufrufen. Am besten gleich ein Lesezeichen anlegen.
+
+Für Fortgeschrittene, im Terminal:
 
 ```bash
 cd ~/abo-tracker
-setsid -f scripts/start-prod.sh     # Server starten (läuft weiter, auch wenn das Terminal zu ist)
-scripts/stop-prod.sh                # Server anhalten
+setsid -f scripts/start-prod.sh     # App starten (läuft weiter, auch wenn das Terminal zu ist)
+scripts/stop-prod.sh                # App anhalten
 tail -f prod-server.log             # Protokoll mitlesen (Strg+C beendet das Mitlesen)
 ```
 
@@ -91,35 +161,43 @@ tail -f prod-server.log             # Protokoll mitlesen (Strg+C beendet das Mit
 
 ## Sicherung erstellen
 
-**Empfohlen:** in der App unter **Einstellungen → Sicherung erstellen**. Die
-Datei landet in deinem Download-Ordner. Näheres dazu in der
-[allgemeinen Anleitung](README.md#backup).
+Mach ab und zu eine Sicherung, und immer vor einem Update. Dafür musst du
+Admin sein, sonst siehst du die Karte nicht.
 
-**Alternativ im Terminal:**
+1. Den Abo-Tracker öffnen und oben auf **Einstellungen** klicken.
+2. In der Karte **Sicherung** auf **Sicherung erstellen** klicken.
+3. Der Browser speichert die Datei `abo-tracker-<Datum>.db` in deinem Ordner
+   **Downloads**.
+4. Die Datei an einen sicheren Ort kopieren, zum Beispiel auf einen
+   USB-Stick.
+
+Mehr dazu in der [allgemeinen Anleitung](README.md#backup).
+
+**Oder im Terminal:**
 
 ```bash
 ~/abo-tracker/scripts/backup-to-desktop.sh
 ```
 
-Das legt die Sicherung im Ordner **`abo-backup`** auf deinem Schreibtisch ab
-(`abo-tracker-<Datum>.db`). Es bleiben die **letzten 10** Sicherungen liegen,
-ältere werden automatisch gelöscht. Beides funktioniert, während der
-Abo-Tracker läuft.
+Das legt die Sicherung im Ordner **`abo-backup`** auf deinem Schreibtisch ab.
+Dort bleiben die **letzten 10** Sicherungen liegen, ältere werden
+automatisch gelöscht. Beides geht, während der Abo-Tracker läuft.
 
 ### Automatisch bei jedem Hochfahren
 
-Praktisch für einen Rechner oder eine VM, die nicht rund um die Uhr läuft:
+Praktisch für einen Rechner, der nicht rund um die Uhr läuft:
 
-1. Im Terminal `crontab -e` eingeben (beim ersten Mal einen Editor wählen,
-   z. B. `nano`).
-2. Diese Zeile ans Ende setzen:
+1. Im Terminal `crontab -e` eingeben und Enter drücken. Beim ersten Mal
+   fragt es nach einem Editor: `1` (nano) und Enter.
+2. Mit den Pfeiltasten ganz nach unten gehen und diese Zeile einfügen
+   (Strg + Umschalt + V):
    ```
    @reboot sleep 60 && $HOME/abo-tracker/scripts/backup-to-desktop.sh >> $HOME/abo-tracker/backup.log 2>&1
    ```
-3. Speichern und schließen (bei `nano`: Strg+O, Enter, Strg+X).
+3. Speichern und schließen: **Strg + O**, **Enter**, **Strg + X**.
 
-Ab dann entsteht bei jedem Start eine Minute nach dem Hochfahren eine
-Sicherung, pro Tag eine Datei.
+Ab dann entsteht eine Minute nach jedem Hochfahren eine Sicherung, pro Tag
+eine Datei.
 
 ---
 
@@ -127,56 +205,61 @@ Sicherung, pro Tag eine Datei.
 
 ### Bei der Installation
 
-Die Frage *„Konten und Abos aus einer Sicherung wiederherstellen?“* mit
-**j** beantworten und den Pfad angeben, siehe
-[Erstinstallation](#erstinstallation), Schritt 2. Diese Frage kommt nur bei
-einer **Erstinstallation**, nicht bei einem Update.
+Bei der Frage *„Konten und Abos aus einer Sicherung wiederherstellen?“* `j`
+antworten, siehe [Erstinstallation, Schritt 4](#schritt-4-die-fragen-beantworten).
+Diese Frage kommt nur bei der ersten Installation, nicht beim Update. Das ist
+der richtige Weg für einen neuen Rechner.
 
-Ohne Rückfrage geht es auch direkt:
+### Wenn der Abo-Tracker schon installiert ist
+
+Zum Beispiel, wenn du aus Versehen etwas gelöscht hast:
+
+1. Die Sicherungsdatei in deinen Ordner **Downloads** legen.
+2. Terminal öffnen (**Strg + Alt + T**), diesen Befehl einfügen und
+   **Enter** drücken:
+   ```bash
+   ~/abo-tracker/scripts/restore.sh
+   ```
+3. Das Terminal zeigt, welche Sicherung es nimmt (die neueste aus
+   **Downloads**, `abo-backup` oder der Deinstallation), und fragt
+   *Fortfahren? [j/N]*. Stimmt die Datei: `j` und **Enter**.
+4. Nach ein paar Sekunden steht dort *Wiederherstellung abgeschlossen.* Im
+   Browser die Seite neu laden (**F5**).
+
+Eine bestimmte Datei nimmst du, indem du ihren Weg dahinter schreibst:
 
 ```bash
-~/abo-tracker/installscript/install.sh --restore ~/Sicherungen/abo-tracker-2026-09-19.db
+~/abo-tracker/scripts/restore.sh ~/Sicherungen/abo-tracker-2026-09-19.db
 ```
 
-### In einer bestehenden Installation
-
-```bash
-cd ~/abo-tracker
-scripts/restore.sh ~/Sicherungen/abo-tracker-2026-09-19.db
-```
-
-Das Skript zeigt, was es tun wird, und fragt nach. Mit **j** bestätigen. Der
-Server wird dabei kurz angehalten und danach wieder gestartet.
-
-Ohne Pfad (`scripts/restore.sh`) nimmt es die neueste Sicherung aus dem
-Download-Ordner, aus `abo-backup` auf dem Schreibtisch oder aus einer
-Sicherung der Deinstallation.
-
-Was dabei passiert und was du danach beachten solltest (z. B. dass die
-Passwörter vom Zeitpunkt der Sicherung zurückkommen), steht in der
-[allgemeinen Anleitung](README.md#restore).
+Deine Daten von vorher gehen nicht verloren: Sie werden vorher als
+`vor-wiederherstellung-<Datum>.db` im Ordner `abo-backup` auf dem
+Schreibtisch abgelegt. Die Passwörter kommen mit dem Stand der Sicherung
+zurück, mehr dazu in der [allgemeinen Anleitung](README.md#restore).
 
 ---
 
 ## Update
 
-Zeigt die App **„Update verfügbar“** an:
+Steht oben im Abo-Tracker **„Update verfügbar“**, gibt es eine neue Version.
+Deine Abos, Konten und Passwörter bleiben beim Update erhalten.
 
-1. **Sicherung erstellen**: in der App *Einstellungen → Sicherung erstellen*.
-2. **Terminal öffnen und denselben Befehl ausführen wie bei der
-   Installation:**
+1. **Sicherung erstellen**, wie oben unter
+   [Sicherung erstellen](#sicherung-erstellen) beschrieben. Nur zur
+   Sicherheit.
+2. **Terminal öffnen:** Strg + Alt + T.
+3. **Denselben Befehl wie bei der Installation** einfügen und **Enter**
+   drücken:
    ```bash
    curl -fsSL https://raw.githubusercontent.com/CrazyJimPro/abo-tracker/main/installscript/bootstrap.sh | bash
    ```
-   Er erkennt die vorhandene Installation, holt die neue Version und bringt
-   alles auf den neuesten Stand. Fragen kommen dabei normalerweise keine:
-   Deine Daten bleiben unangetastet, nach einer Sicherung wird nicht gefragt,
-   und der Autostart bleibt, wie er ist.
-3. Der Server wird automatisch angehalten und neu gestartet. Browser neu
-   laden, die neue Versionsnummer steht oben neben dem Schriftzug, der
-   Update-Hinweis ist weg.
+4. **Warten**, meist 2 bis 4 Minuten. Normalerweise kommen keine Fragen.
+   Kommt doch eine, einfach **Enter** drücken.
+5. Steht **„Fertig.“** im Terminal, im Browser die Seite neu laden (**F5**).
+   Oben neben „Abo-Tracker“ steht jetzt die neue Versionsnummer, und „Update
+   verfügbar“ ist verschwunden.
 
-Gleichwertig, falls du lieber im Programmordner arbeitest:
+Für Fortgeschrittene geht es auch im Programmordner:
 
 ```bash
 cd ~/abo-tracker
@@ -184,25 +267,32 @@ git pull
 ./installscript/install.sh
 ```
 
-Bitte nach `git pull` immer `install.sh` ausführen. Nur so werden neue
-Abhängigkeiten installiert und Änderungen an der Datenbank angewendet.
+Nach `git pull` bitte immer `install.sh` ausführen. Nur so werden neue
+Bausteine installiert und Änderungen an der Datenbank angewendet.
 
 ---
 
 ## Deinstallation
 
-```bash
-cd ~/abo-tracker
-./installscript/uninstall.sh --keep-data
-```
+1. Terminal öffnen: **Strg + Alt + T**.
+2. Diesen Befehl einfügen und **Enter** drücken:
+   ```bash
+   ~/abo-tracker/installscript/uninstall.sh --keep-data
+   ```
+3. Bei der Frage *Projektordner … jetzt endgültig entfernen? [J/n]*
+   **Enter** drücken.
+4. Am Ende steht *„Fertig. Abo-Tracker ist deinstalliert.“*
 
-Das hält den Server an, entfernt den Autostart und löscht den Programmordner.
-Mit `--keep-data` wird die Datenbank vorher nach
-`~/abo-tracker-data-backup-<Datum>/` kopiert. Die Datei `abo-tracker.db` darin
-kannst du später beim Installieren als Sicherung angeben.
+**Deine Daten** liegen danach in deinem persönlichen Ordner im Ordner
+`abo-tracker-data-backup-<Datum>`, darin die Datei `abo-tracker.db`. Heb diesen
+Ordner gut auf. Installierst du den Abo-Tracker später wieder, schlägt die
+Installation diese Datei bei der Frage nach der Sicherung von selbst vor.
 
-Ohne `--keep-data` werden **auch deine Daten gelöscht**. Das Skript fragt
-vorher einmal nach. Mit `-y` fragt es gar nicht mehr.
+> **Achtung:** Ohne `--keep-data` am Ende des Befehls werden **auch alle Abos
+> und Konten gelöscht**, endgültig.
+
+Was danach bleibt: `git`, `curl` und, falls die Installation es geholt hat,
+Node.js (im versteckten Ordner `~/.nvm`). Das stört nicht und kann bleiben.
 
 ---
 
@@ -210,15 +300,26 @@ vorher einmal nach. Mit `-y` fragt es gar nicht mehr.
 
 | Problem | Lösung |
 | --- | --- |
-| `git wird gebraucht` / `curl: Befehl nicht gefunden` | `sudo apt install git curl`, dann den Befehl erneut ausführen. |
-| `Kein Node >= 22.18 gefunden` | Die Frage nach nvm wurde verneint. Befehl erneut ausführen und mit Enter bestätigen, oder Node von <https://nodejs.org> installieren. |
-| Die App lädt nicht im Browser | Server läuft nicht: `cd ~/abo-tracker && setsid -f scripts/start-prod.sh`. Den Grund zeigt `tail -20 ~/abo-tracker/prod-server.log`. |
-| `better-sqlite3 lässt sich nicht laden` | Das Skript nennt die Ursache selbst. Meist ist `node_modules` beschädigt: `cd ~/abo-tracker && rm -rf node_modules && ./installscript/install.sh`. |
-| `Port 3200 ist von einem fremden Prozess belegt` | Ein anderes Programm nutzt den Port. Mit `--port 3300` installieren bzw. `PORT=3300 setsid -f scripts/start-prod.sh` starten. |
-| `Datenbank nicht gefunden` | Der Server wurde nicht über `scripts/start-prod.sh` gestartet. |
-| Beim Update: `git pull` bricht mit „local changes“ ab | Im Programmordner wurden Dateien geändert. `cd ~/abo-tracker && git stash`, dann das Update erneut ausführen. |
+| Strg + V fügt im Terminal nichts ein | Im Terminal heißt es **Strg + Umschalt + V**, oder Rechtsklick → **Einfügen**. |
+| Beim Passwort-Tippen erscheint nichts | Das ist normal. Blind weitertippen und Enter drücken. |
+| `… ist nicht in der sudoers-Datei` | Dein Benutzer darf keine Programme installieren. Die Person, die den Rechner eingerichtet hat, muss Schritt 2 einmal für dich ausführen. |
+| `git wird gebraucht` / `curl: Befehl nicht gefunden` | Schritt 2 wurde übersprungen. `sudo apt install -y git curl`, dann Schritt 3 noch einmal. |
+| `Kein Node >= 22.18 gefunden` | Die Frage nach Node wurde mit `n` beantwortet. Schritt 3 noch einmal und bei der Frage einfach **Enter** drücken. |
+| Der Browser zeigt „Seite nicht erreichbar“ | Die App läuft nicht. Im Terminal: `cd ~/abo-tracker && setsid -f scripts/start-prod.sh`. Den Grund zeigt `tail -20 ~/abo-tracker/prod-server.log`. |
+| Vorläufiges Passwort nicht aufgeschrieben, noch nie angemeldet | `~/abo-tracker/installscript/uninstall.sh` (ohne `--keep-data`, es gibt ja noch keine Daten), dann Schritt 3 noch einmal. Dann gibt es ein neues Passwort. |
 | Passwort vergessen | Eine andere Person mit Admin-Rechten setzt es im Bereich *Admin* zurück. |
+| `better-sqlite3 lässt sich nicht laden` | Das Skript nennt die Ursache selbst. Meist hilft: `cd ~/abo-tracker && rm -rf node_modules && ./installscript/install.sh`. |
+| `Port 3200 ist von einem fremden Prozess belegt` | Ein anderes Programm benutzt den Port. Mit `--port 3300` installieren bzw. `PORT=3300 setsid -f scripts/start-prod.sh` starten, dann <http://localhost:3300> öffnen. |
+| `Datenbank nicht gefunden` | Die App wurde nicht über `scripts/start-prod.sh` gestartet. |
+| Beim Update: `git pull` bricht mit „local changes“ ab | Im Programmordner wurden Dateien geändert. `cd ~/abo-tracker && git stash`, dann das Update noch einmal. |
 | Firefox vergisst die Design-Wahl (hell/dunkel) nach einem Neustart | Passiert beim Zugriff über `localhost` oder eine IP-Adresse, wenn Firefox beim Beenden Cookies löscht. Die Installation zeigt am Ende die zwei passenden Befehle an (fester Name `abo.local` + `scripts/firefox-persist-fix.sh`). |
+
+Wer die Installation ohne Rückfragen braucht (z. B. in einem Skript):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/CrazyJimPro/abo-tracker/main/installscript/bootstrap.sh \
+  | bash -s -- --email ich@example.com -y
+```
 
 ---
 

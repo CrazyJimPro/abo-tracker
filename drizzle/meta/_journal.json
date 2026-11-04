@@ -43,6 +43,13 @@
       "when": 1793814018900,
       "tag": "0005_contract_notice",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1793814621282,
+      "tag": "0006_payment_method",
+      "breakpoints": true
     }
   ]
 }

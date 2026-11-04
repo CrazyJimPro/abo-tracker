@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SubscriptionFilters } from "@/components/subscriptions/subscription-filters";
 import { effectiveAmount, promoActive } from "@/lib/pricing";
+import { PAYMENT_METHOD_LABELS } from "@/lib/subscription-validation";
 
 const INTERVAL_LABELS: Record<string, string> = {
   weekly: "wöchentlich",
@@ -29,7 +30,7 @@ const STATUS_LABELS: Record<string, string> = {
 export default async function SubscriptionsListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; kategorie?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; kategorie?: string; zahlung?: string }>;
 }) {
   const user = await requireUser();
 
@@ -40,13 +41,15 @@ export default async function SubscriptionsListPage({
   // touched the filter, since that's the default now.
   const status = params.status ?? user.aboStatusFilter;
   const kategorie = params.kategorie ?? user.aboCategoryFilter;
-  const hasFilters = Boolean(search || kategorie) || status !== "all";
+  const zahlung = params.zahlung ?? user.aboPaymentFilter;
+  const hasFilters = Boolean(search || kategorie || zahlung) || status !== "all";
 
   const categories = listVisibleCategories(user.id);
   const subscriptions = listSubscriptions(user.id, {
     search,
     status,
     categoryId: kategorie,
+    paymentMethod: zahlung,
   });
 
   const grouped = new Map<
@@ -82,6 +85,7 @@ export default async function SubscriptionsListPage({
         categories={categories}
         initialQ={search}
         initialStatus={status}
+        initialZahlung={zahlung}
         initialKategorie={kategorie}
       />
 
@@ -119,6 +123,7 @@ export default async function SubscriptionsListPage({
                       maximumFractionDigits: 2,
                     })}{" "}
                     € · {INTERVAL_LABELS[sub.billingInterval] ?? sub.billingInterval}
+                    {sub.paymentMethod && ` · ${PAYMENT_METHOD_LABELS[sub.paymentMethod]}`}
                     {promoActive(sub, todayStr) &&
                       ` · Aktion bis ${new Date(sub.introUntil!).toLocaleDateString("de-DE")}`}
                     {(() => {

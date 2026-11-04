@@ -3,7 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
-import { updateAboCategoryFilter, updateAboStatusFilter } from "@/lib/actions/profile";
+import {
+  updateAboCategoryFilter,
+  updateAboPaymentFilter,
+  updateAboStatusFilter,
+} from "@/lib/actions/profile";
+import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from "@/lib/subscription-validation";
 
 type CategoryOption = { id: string; name: string };
 
@@ -15,17 +20,20 @@ export function SubscriptionFilters({
   initialQ,
   initialStatus,
   initialKategorie,
+  initialZahlung,
 }: {
   categories: CategoryOption[];
   initialQ: string;
   initialStatus: string;
   initialKategorie: string;
+  initialZahlung: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const [q, setQ] = useState(initialQ);
   const [status, setStatus] = useState(initialStatus);
   const [kategorie, setKategorie] = useState(initialKategorie);
+  const [zahlung, setZahlung] = useState(initialZahlung);
   const first = useRef(true);
 
   useEffect(() => {
@@ -39,11 +47,12 @@ export function SubscriptionFilters({
       if (q) params.set("q", q);
       if (status) params.set("status", status);
       if (kategorie) params.set("kategorie", kategorie);
+      if (zahlung) params.set("zahlung", zahlung);
       const qs = params.toString();
       router.replace(qs ? `${pathname}?${qs}` : pathname);
     }, 250);
     return () => clearTimeout(timeout);
-  }, [q, status, kategorie, pathname, router]);
+  }, [q, status, kategorie, zahlung, pathname, router]);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -81,6 +90,23 @@ export function SubscriptionFilters({
             {c.name}
           </option>
         ))}
+      </select>
+      <select
+        value={zahlung}
+        onChange={(e) => {
+          setZahlung(e.target.value);
+          void updateAboPaymentFilter(e.target.value);
+        }}
+        className={SELECT_CLASS}
+        aria-label="Zahlungsart"
+      >
+        <option value="">Alle Zahlungsarten</option>
+        {PAYMENT_METHODS.map((m) => (
+          <option key={m} value={m}>
+            {PAYMENT_METHOD_LABELS[m]}
+          </option>
+        ))}
+        <option value="none">Ohne Angabe</option>
       </select>
     </div>
   );

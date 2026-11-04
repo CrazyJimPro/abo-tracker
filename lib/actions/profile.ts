@@ -6,11 +6,14 @@ import { getCurrentUser } from "@/lib/auth/session";
 import {
   listVisibleCategories,
   setAboCategoryFilter,
+  setAboPaymentFilter,
   setAboStatusFilter,
   setNotifyDays,
   updateDisplayName,
 } from "@/lib/db/queries";
 import { NOTIFY_DAYS_OPTIONS } from "@/lib/notify-days";
+import { PAYMENT_METHODS } from "@/lib/subscription-validation";
+import type { PaymentMethod } from "@/lib/db/schema";
 
 export type ActionState = { error: string | null; success: boolean };
 
@@ -36,6 +39,17 @@ export async function updateAboCategoryFilter(categoryId: string) {
   }
 
   setAboCategoryFilter(user.id, categoryId);
+}
+
+export async function updateAboPaymentFilter(paymentMethod: string) {
+  if (paymentMethod !== "" && paymentMethod !== "none" && !PAYMENT_METHODS.includes(paymentMethod as PaymentMethod)) {
+    return;
+  }
+
+  const user = await getCurrentUser();
+  if (!user) return;
+
+  setAboPaymentFilter(user.id, paymentMethod);
 }
 
 export async function updateNotifyDays(days: number): Promise<boolean> {

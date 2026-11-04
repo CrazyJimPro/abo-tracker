@@ -13,7 +13,12 @@ import {
   updateSubscription as updateSubscriptionRow,
   type SubscriptionValues,
 } from "@/lib/db/queries";
-import type { BillingInterval, NoticeUnit, SubscriptionStatus } from "@/lib/db/schema";
+import type {
+  BillingInterval,
+  NoticeUnit,
+  PaymentMethod,
+  SubscriptionStatus,
+} from "@/lib/db/schema";
 import {
   CATEGORY_COLORS,
   readSubscriptionFields,
@@ -71,6 +76,7 @@ function toValues(
     contractEnd: fields.contractEnd,
     noticePeriod: fields.noticePeriod,
     noticeUnit: fields.noticeUnit as NoticeUnit | null,
+    paymentMethod: fields.paymentMethod as PaymentMethod | null,
   };
 }
 

@@ -1,5 +1,10 @@
 import Papa from "papaparse";
-import type { BillingInterval, NoticeUnit, SubscriptionStatus } from "@/lib/db/schema";
+import type {
+  BillingInterval,
+  NoticeUnit,
+  PaymentMethod,
+  SubscriptionStatus,
+} from "@/lib/db/schema";
 
 export const CSV_HEADERS = [
   "ID",
@@ -14,6 +19,7 @@ export const CSV_HEADERS = [
   "Vertrag läuft bis",
   "Kündigungsfrist",
   "Kündigungsfrist Einheit",
+  "Zahlungsart",
   "Notizen",
 ] as const;
 
@@ -55,6 +61,28 @@ export function noticeUnitFromLabel(label: string): string {
   return NOTICE_UNIT_BY_LABEL[t] ?? t;
 }
 
+// Gleich PAYMENT_METHOD_LABELS in lib/subscription-validation.ts — aus
+// demselben Grund wie oben hier nochmal.
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  paypal: "PayPal",
+  credit_card: "Kreditkarte",
+  direct_debit: "Lastschrift",
+  bank_transfer: "Überweisung/Rechnung",
+  other: "Sonstiges",
+};
+
+const PAYMENT_METHOD_BY_LABEL: Record<string, PaymentMethod> = Object.fromEntries(
+  Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => [label, value as PaymentMethod])
+);
+
+// Leer heißt keine Angabe; Unbekanntes kommt unverändert zurück und wird von
+// validate() gemeldet.
+export function paymentMethodFromLabel(label: string): string | null {
+  const t = label.trim();
+  if (!t) return null;
+  return PAYMENT_METHOD_BY_LABEL[t] ?? t;
+}
+
 const BILLING_INTERVAL_BY_LABEL: Record<string, BillingInterval> = Object.fromEntries(
   Object.entries(BILLING_INTERVAL_LABELS).map(([value, label]) => [label, value as BillingInterval])
 );
@@ -84,6 +112,7 @@ export type ExportRow = {
   contractEnd: string | null;
   noticePeriod: number | null;
   noticeUnit: NoticeUnit | null;
+  paymentMethod: PaymentMethod | null;
   notes: string | null;
 };
 
@@ -125,6 +154,7 @@ export function encodeSubscriptionsToCsv(rows: ExportRow[]): string {
         r.contractEnd ?? "",
         r.noticePeriod != null ? String(r.noticePeriod) : "",
         r.noticePeriod != null && r.noticeUnit ? NOTICE_UNIT_LABELS[r.noticeUnit] : "",
+        r.paymentMethod ? PAYMENT_METHOD_LABELS[r.paymentMethod] : "",
         r.notes ? csvEscape(r.notes) : "",
       ].join(";")
     );

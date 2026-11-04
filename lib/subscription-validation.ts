@@ -1,4 +1,9 @@
-import type { BillingInterval, NoticeUnit, SubscriptionStatus } from "@/lib/db/schema";
+import type {
+  BillingInterval,
+  NoticeUnit,
+  PaymentMethod,
+  SubscriptionStatus,
+} from "@/lib/db/schema";
 
 // Shared by lib/actions/subscriptions.ts (form-based create/update) and
 // lib/actions/csv-import.ts (CSV import) so both stay in sync. Deliberately
@@ -9,6 +14,15 @@ import type { BillingInterval, NoticeUnit, SubscriptionStatus } from "@/lib/db/s
 export const BILLING_INTERVALS: BillingInterval[] = ["weekly", "monthly", "quarterly", "yearly"];
 export const STATUSES: SubscriptionStatus[] = ["active", "paused", "cancelled"];
 export const NOTICE_UNITS: NoticeUnit[] = ["days", "weeks", "months"];
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  paypal: "PayPal",
+  credit_card: "Kreditkarte",
+  direct_debit: "Lastschrift",
+  bank_transfer: "Überweisung/Rechnung",
+  other: "Sonstiges",
+};
+export const PAYMENT_METHODS = Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[];
 
 // Palette for auto-coloring newly created categories, mirroring the tones of
 // the global seed categories so a fresh private category looks at home in
@@ -39,6 +53,7 @@ export type SubscriptionFields = {
   contractEnd: string | null;
   noticePeriod: number | null;
   noticeUnit: string | null;
+  paymentMethod: string | null;
 };
 
 // Echtes Kalenderdatum im Format JJJJ-MM-TT — "2026-02-30" fällt durch, weil
@@ -73,6 +88,8 @@ export function readSubscriptionFields(formData: FormData): SubscriptionFields {
   // Die Einheit zählt nur zusammen mit einer Frist.
   const noticeUnit =
     noticePeriod !== null ? (formData.get("notice_unit") as string)?.trim() || "months" : null;
+  const paymentMethodRaw = (formData.get("payment_method") as string)?.trim();
+  const paymentMethod = paymentMethodRaw && paymentMethodRaw !== "none" ? paymentMethodRaw : null;
   return {
     name,
     amount,
@@ -86,6 +103,7 @@ export function readSubscriptionFields(formData: FormData): SubscriptionFields {
     contractEnd,
     noticePeriod,
     noticeUnit,
+    paymentMethod,
   };
 }
 
@@ -103,7 +121,8 @@ export type SubscriptionFieldName =
   | "intro_until"
   | "contract_end"
   | "notice_period"
-  | "notice_unit";
+  | "notice_unit"
+  | "payment_method";
 
 export type SubscriptionFieldErrors = Partial<Record<SubscriptionFieldName, string>>;
 
@@ -152,6 +171,12 @@ export function validateFields(fields: SubscriptionFields): SubscriptionFieldErr
   }
   if (fields.noticeUnit !== null && !NOTICE_UNITS.includes(fields.noticeUnit as NoticeUnit)) {
     errors.notice_unit = "Ungültige Einheit der Kündigungsfrist.";
+  }
+  if (
+    fields.paymentMethod !== null &&
+    !PAYMENT_METHODS.includes(fields.paymentMethod as PaymentMethod)
+  ) {
+    errors.payment_method = `Unbekannte Zahlungsart "${fields.paymentMethod}".`;
   }
   return errors;
 }

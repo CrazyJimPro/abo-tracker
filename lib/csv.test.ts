@@ -9,6 +9,7 @@ import {
   encodeSubscriptionsToCsv,
   normalizeImportDate,
   noticeUnitFromLabel,
+  paymentMethodFromLabel,
   parseSubscriptionsCsv,
   type ExportRow,
 } from "./csv.ts";
@@ -27,6 +28,7 @@ const row: ExportRow = {
   contractEnd: "2027-06-30",
   noticePeriod: 3,
   noticeUnit: "months",
+  paymentMethod: "bank_transfer",
   notes: "Kündigung; bestätigt",
 };
 
@@ -49,6 +51,13 @@ test("Export aus der App wird unverändert wieder gelesen", () => {
   assert.equal(raw["Vertrag läuft bis"], "2027-06-30");
   assert.equal(raw["Kündigungsfrist"], "3");
   assert.equal(noticeUnitFromLabel(raw["Kündigungsfrist Einheit"]), "months");
+  assert.equal(paymentMethodFromLabel(raw["Zahlungsart"]), "bank_transfer");
+});
+
+test("paymentMethodFromLabel", () => {
+  assert.equal(paymentMethodFromLabel("PayPal"), "paypal");
+  assert.equal(paymentMethodFromLabel(" "), null);
+  assert.equal(paymentMethodFromLabel("Bar"), "Bar");
 });
 
 test("noticeUnitFromLabel", () => {

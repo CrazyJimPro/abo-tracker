@@ -56,6 +56,9 @@ export const users = sqliteTable(
     // "Benachrichtigungen" auftauchen (siehe lib/notify-days.ts). Ebenfalls
     // ohne CHECK-Constraint, aus demselben Grund wie aboStatusFilter oben.
     notifyDays: integer("notify_days").notNull().default(7),
+    // Letzter Zahlungsart-Filter der Abo-Liste ("" = alle, "none" = ohne
+    // Angabe). Wie die beiden Filter oben ohne CHECK-Constraint.
+    aboPaymentFilter: text("abo_payment_filter").notNull().default(""),
     ...timestamps,
   },
   (t) => [
@@ -132,6 +135,9 @@ export const subscriptions = sqliteTable(
     contractEnd: text("contract_end"),
     noticePeriod: integer("notice_period"),
     noticeUnit: text("notice_unit").$type<NoticeUnit>(),
+    // Freiwillig, aus einer festen Liste (PAYMENT_METHODS in
+    // lib/subscription-validation.ts); null = keine Angabe. Kein CHECK, s. o.
+    paymentMethod: text("payment_method").$type<PaymentMethod>(),
     ...timestamps,
   },
   (t) => [
@@ -189,6 +195,7 @@ export type UserRole = "admin" | "member";
 export type BillingInterval = "weekly" | "monthly" | "quarterly" | "yearly";
 export type SubscriptionStatus = "active" | "paused" | "cancelled";
 export type NoticeUnit = "days" | "weeks" | "months";
+export type PaymentMethod = "paypal" | "credit_card" | "direct_debit" | "bank_transfer" | "other";
 export type PriceHistorySource = "initial" | "auto" | "manual";
 
 export type User = typeof users.$inferSelect;

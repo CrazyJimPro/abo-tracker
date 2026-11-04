@@ -10,6 +10,7 @@ import {
   users,
   type BillingInterval,
   type NoticeUnit,
+  type PaymentMethod,
   type PriceHistorySource,
   type SubscriptionStatus,
   type UserRole,
@@ -114,6 +115,7 @@ export type SubscriptionValues = {
   contractEnd: string | null;
   noticePeriod: number | null;
   noticeUnit: NoticeUnit | null;
+  paymentMethod: PaymentMethod | null;
 };
 
 const withCategory = {
@@ -130,6 +132,7 @@ const withCategory = {
   contractEnd: subscriptions.contractEnd,
   noticePeriod: subscriptions.noticePeriod,
   noticeUnit: subscriptions.noticeUnit,
+  paymentMethod: subscriptions.paymentMethod,
   categoryName: categories.name,
   categoryColor: categories.color,
   categorySortOrder: categories.sortOrder,
@@ -137,12 +140,18 @@ const withCategory = {
 
 export function listSubscriptions(
   userId: string,
-  filters: { search?: string; status?: string; categoryId?: string } = {}
+  filters: { search?: string; status?: string; categoryId?: string; paymentMethod?: string } = {}
 ) {
   const conditions = [eq(subscriptions.ownerId, userId)];
 
   if (filters.search) conditions.push(like(subscriptions.name, `%${filters.search}%`));
   if (filters.categoryId) conditions.push(eq(subscriptions.categoryId, filters.categoryId));
+  // "none" = Abos ohne Angabe; "" bzw. nicht gesetzt = kein Filter.
+  if (filters.paymentMethod === "none") {
+    conditions.push(isNull(subscriptions.paymentMethod));
+  } else if (filters.paymentMethod) {
+    conditions.push(eq(subscriptions.paymentMethod, filters.paymentMethod as PaymentMethod));
+  }
 
   const { status } = filters;
   if (status === "active" || status === "paused" || status === "cancelled") {
@@ -217,7 +226,10 @@ export function findMatchingSubscription(userId: string, values: SubscriptionVal
           : eq(subscriptions.noticePeriod, values.noticePeriod),
         values.noticeUnit === null
           ? isNull(subscriptions.noticeUnit)
-          : eq(subscriptions.noticeUnit, values.noticeUnit)
+          : eq(subscriptions.noticeUnit, values.noticeUnit),
+        values.paymentMethod === null
+          ? isNull(subscriptions.paymentMethod)
+          : eq(subscriptions.paymentMethod, values.paymentMethod)
       )
     )
     .get();
@@ -473,6 +485,13 @@ export function setAboStatusFilter(userId: string, status: string) {
 export function setNotifyDays(userId: string, days: number) {
   db.update(users)
     .set({ notifyDays: days, updatedAt: nowIso() })
+    .where(eq(users.id, userId))
+    .run();
+}
+
+export function setAboPaymentFilter(userId: string, paymentMethod: string) {
+  db.update(users)
+    .set({ aboPaymentFilter: paymentMethod, updatedAt: nowIso() })
     .where(eq(users.id, userId))
     .run();
 }

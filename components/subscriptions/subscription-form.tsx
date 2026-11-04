@@ -18,6 +18,8 @@ import { useFieldForm } from "@/components/forms/use-field-form";
 import type { ActionState } from "@/lib/actions/subscriptions";
 import {
   NOTICE_UNITS,
+  PAYMENT_METHODS,
+  PAYMENT_METHOD_LABELS,
   readSubscriptionFields,
   validateFields,
 } from "@/lib/subscription-validation";
@@ -33,6 +35,11 @@ const BILLING_INTERVAL_OPTIONS = [
 ];
 
 const NOTICE_UNIT_OPTIONS = NOTICE_UNITS.map((u) => ({ value: u, label: NOTICE_UNIT_LABELS[u] }));
+
+const PAYMENT_METHOD_OPTIONS = [
+  { value: "none", label: "Keine Angabe" },
+  ...PAYMENT_METHODS.map((m) => ({ value: m, label: PAYMENT_METHOD_LABELS[m] })),
+];
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Aktiv" },
@@ -65,6 +72,7 @@ export function SubscriptionForm({
     contractEnd: string | null;
     noticePeriod: number | null;
     noticeUnit: string | null;
+    paymentMethod: string | null;
   };
   submitLabel: string;
 }) {
@@ -235,18 +243,44 @@ export function SubscriptionForm({
         </div>
       )}
 
-      <div className="space-y-2">
-        <Label htmlFor="next_billing_date" className={labelClass("next_billing_date")}>
-          Nächste Abrechnung
-        </Label>
-        <Input
-          id="next_billing_date"
-          name="next_billing_date"
-          type="date"
-          aria-invalid={invalid("next_billing_date")}
-          defaultValue={defaultValues?.nextBillingDate ?? ""}
-        />
-        <FieldError message={errors.next_billing_date} />
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="next_billing_date" className={labelClass("next_billing_date")}>
+            Nächste Abrechnung
+          </Label>
+          <Input
+            id="next_billing_date"
+            name="next_billing_date"
+            type="date"
+            aria-invalid={invalid("next_billing_date")}
+            defaultValue={defaultValues?.nextBillingDate ?? ""}
+          />
+          <FieldError message={errors.next_billing_date} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="payment_method">Zahlungsart</Label>
+          <Select
+            name="payment_method"
+            items={PAYMENT_METHOD_OPTIONS}
+            defaultValue={defaultValues?.paymentMethod ?? "none"}
+          >
+            <SelectTrigger
+              id="payment_method"
+              className="w-full"
+              aria-invalid={invalid("payment_method")}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAYMENT_METHOD_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <FieldError message={errors.payment_method} />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

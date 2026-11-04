@@ -16,7 +16,6 @@ import {
 import type { BillingInterval, SubscriptionStatus } from "@/lib/db/schema";
 import {
   CATEGORY_COLORS,
-  FIELD_ERRORS_MESSAGE,
   readSubscriptionFields,
   validateFields,
   type SubscriptionFieldErrors,
@@ -26,7 +25,7 @@ export type ActionState = { error: string | null; fieldErrors?: SubscriptionFiel
 
 function fieldErrorState(fieldErrors: SubscriptionFieldErrors): ActionState | null {
   if (Object.keys(fieldErrors).length === 0) return null;
-  return { error: FIELD_ERRORS_MESSAGE, fieldErrors };
+  return { error: null, fieldErrors };
 }
 
 // Resolves the submitted category selection to a category id. The special
@@ -85,7 +84,7 @@ export async function createSubscription(
 
   const resolved = resolveCategoryId(user.id, fields.categoryId, formData);
   if ("error" in resolved) {
-    return { error: resolved.error, fieldErrors: { new_category_name: resolved.error } };
+    return { error: null, fieldErrors: { new_category_name: resolved.error } };
   }
 
   insertSubscription(user.id, toValues(fields, resolved.categoryId));
@@ -109,7 +108,7 @@ export async function updateSubscription(
 
   const resolved = resolveCategoryId(user.id, fields.categoryId, formData);
   if ("error" in resolved) {
-    return { error: resolved.error, fieldErrors: { new_category_name: resolved.error } };
+    return { error: null, fieldErrors: { new_category_name: resolved.error } };
   }
 
   updateSubscriptionRow(user.id, subscriptionId, toValues(fields, resolved.categoryId));

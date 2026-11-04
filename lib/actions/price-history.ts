@@ -9,25 +9,12 @@ import {
   insertPriceHistoryEntry,
   updatePriceHistoryEntry as updatePriceHistoryEntryRow,
 } from "@/lib/db/queries";
+import { readPriceEntry } from "@/lib/price-history-validation";
 
-export type PriceHistoryActionState = { error: string | null };
-
-function readAmountAndDate(formData: FormData): { amount: number; changedAt: string } | { error: string } {
-  const amountRaw = (formData.get("amount") as string)?.trim();
-  const amount = amountRaw ? Number(amountRaw) : NaN;
-  const changedAt = (formData.get("changed_at") as string)?.trim();
-
-  if (!Number.isFinite(amount) || amount < 0) {
-    return { error: "Betrag muss eine positive Zahl sein." };
-  }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(changedAt)) {
-    return { error: "Bitte ein gültiges Datum angeben." };
-  }
-  if (changedAt > new Date().toISOString().slice(0, 10)) {
-    return { error: "Datum darf nicht in der Zukunft liegen." };
-  }
-  return { amount, changedAt };
-}
+export type PriceHistoryActionState = {
+  error: string | null;
+  fieldErrors?: Record<string, string>;
+};
 
 // Lets a user backfill a price they remember from before this feature
 // existed — the automatic capture in updateSubscription only sees changes
@@ -43,8 +30,8 @@ export async function addManualPriceHistoryEntry(
   const subscription = getSubscription(user.id, subscriptionId);
   if (!subscription) return { error: "Abo nicht gefunden." };
 
-  const parsed = readAmountAndDate(formData);
-  if ("error" in parsed) return parsed;
+  const parsed = readPriceEntry(formData);
+  if ("fieldErrors" in parsed) return { error: null, fieldErrors: parsed.fieldErrors };
 
   insertPriceHistoryEntry(user.id, subscriptionId, { ...parsed, source: "manual" });
 
@@ -64,8 +51,8 @@ export async function editPriceHistoryEntry(
   const user = await getCurrentUser();
   if (!user) return { error: "Nicht angemeldet." };
 
-  const parsed = readAmountAndDate(formData);
-  if ("error" in parsed) return parsed;
+  const parsed = readPriceEntry(formData);
+  if ("fieldErrors" in parsed) return { error: null, fieldErrors: parsed.fieldErrors };
 
   updatePriceHistoryEntryRow(user.id, entryId, parsed);
 

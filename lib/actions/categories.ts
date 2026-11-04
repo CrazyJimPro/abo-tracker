@@ -10,7 +10,7 @@ import {
   updateGlobalCategory,
 } from "@/lib/db/queries";
 
-export type ActionState = { error: string | null };
+export type ActionState = { error: string | null; fieldErrors?: Record<string, string> };
 
 function readCategoryFields(formData: FormData) {
   const name = (formData.get("name") as string)?.trim();
@@ -34,14 +34,17 @@ export async function createCategory(
   if (!(await requireAdminUser())) return { error: "Nicht berechtigt." };
 
   const { name, color, sortOrder } = readCategoryFields(formData);
-  if (!name) return { error: "Name ist erforderlich." };
+  if (!name) return { error: null, fieldErrors: { name: "Name ist erforderlich." } };
 
   let id: string;
   try {
     id = createGlobalCategory(name, color, sortOrder);
   } catch (e) {
     if (e instanceof Error && e.message.includes("UNIQUE")) {
-      return { error: "Es gibt bereits eine Kategorie mit diesem Namen." };
+      return {
+        error: null,
+        fieldErrors: { name: "Es gibt bereits eine Kategorie mit diesem Namen." },
+      };
     }
     throw e;
   }
@@ -58,13 +61,16 @@ export async function updateCategory(
   if (!(await requireAdminUser())) return { error: "Nicht berechtigt." };
 
   const { name, color, sortOrder } = readCategoryFields(formData);
-  if (!name) return { error: "Name ist erforderlich." };
+  if (!name) return { error: null, fieldErrors: { name: "Name ist erforderlich." } };
 
   try {
     updateGlobalCategory(categoryId, { name, color, sortOrder });
   } catch (e) {
     if (e instanceof Error && e.message.includes("UNIQUE")) {
-      return { error: "Es gibt bereits eine Kategorie mit diesem Namen." };
+      return {
+        error: null,
+        fieldErrors: { name: "Es gibt bereits eine Kategorie mit diesem Namen." },
+      };
     }
     throw e;
   }

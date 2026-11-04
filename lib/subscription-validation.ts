@@ -91,7 +91,6 @@ export type SubscriptionFieldName =
 
 export type SubscriptionFieldErrors = Partial<Record<SubscriptionFieldName, string>>;
 
-export const FIELD_ERRORS_MESSAGE = "Bitte die rot markierten Felder prüfen.";
 
 // Sammelt alle Fehler auf einmal, damit das Formular jedes betroffene Feld
 // gleichzeitig markieren kann statt eines nach dem anderen.

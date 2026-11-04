@@ -1,9 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { Pencil, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FieldError, FormMessage } from "@/components/forms/field-error";
+import { useFieldForm } from "@/components/forms/use-field-form";
+import { readPriceEntry } from "@/lib/price-history-validation";
 import {
   deletePriceHistoryEntry,
   editPriceHistoryEntry,
@@ -32,25 +35,31 @@ export function PriceHistoryRow({
   deltaPct: number | null;
 }) {
   const [editing, setEditing] = useState(false);
-  const editAction = editPriceHistoryEntry.bind(null, subscriptionId, entry.id);
   const deleteAction = deletePriceHistoryEntry.bind(null, subscriptionId, entry.id);
-  const [state, formAction, isPending] = useActionState(editAction, initialState);
+  // Bei einem Fehler bleibt die Zeile im Bearbeiten-Modus, damit man die
+  // markierten Felder gleich korrigieren kann; zu geht sie erst bei Erfolg.
+  const { isPending, errors, formMessage, formProps, invalid } =
+    useFieldForm<PriceHistoryActionState>({
+      action: (formData) =>
+        editPriceHistoryEntry(subscriptionId, entry.id, initialState, formData),
+      validate: (formData) => {
+        const parsed = readPriceEntry(formData);
+        return "fieldErrors" in parsed ? parsed.fieldErrors : {};
+      },
+      onSuccess: () => setEditing(false),
+    });
 
   if (editing) {
     return (
       <div className="space-y-2 px-4 py-2 text-sm">
-        <form
-          action={async (formData) => {
-            await formAction(formData);
-            setEditing(false);
-          }}
-          className="flex flex-wrap items-end gap-2"
-        >
+        <form {...formProps} className="flex flex-wrap items-end gap-2">
           <Input
             name="changed_at"
             type="date"
             defaultValue={entry.changedAt}
             required
+            aria-invalid={invalid("changed_at")}
+            aria-label="Datum"
             className="h-8 w-36"
           />
           <Input
@@ -60,6 +69,8 @@ export function PriceHistoryRow({
             min="0"
             defaultValue={entry.amount}
             required
+            aria-invalid={invalid("amount")}
+            aria-label="Betrag"
             className="h-8 w-24"
           />
           <Button type="submit" size="sm" disabled={isPending}>
@@ -69,7 +80,9 @@ export function PriceHistoryRow({
             <X className="h-3.5 w-3.5" />
           </Button>
         </form>
-        {state.error && <p className="text-sm text-red-600">{state.error}</p>}
+        <FieldError message={errors.changed_at} />
+        <FieldError message={errors.amount} />
+        <FormMessage message={formMessage} />
       </div>
     );
   }

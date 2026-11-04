@@ -16,6 +16,7 @@ async function requireAdmin() {
 
 export type CreateUserState = {
   error: string | null;
+  fieldErrors?: Record<string, string>;
   result: { email: string; tempPassword: string } | null;
 };
 
@@ -29,7 +30,7 @@ export async function createMemberUser(
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const displayName = (formData.get("display_name") as string)?.trim() || null;
 
-  if (!email) return { error: "E-Mail ist erforderlich.", result: null };
+  if (!email) return { error: null, fieldErrors: { email: "E-Mail ist erforderlich." }, result: null };
 
   const tempPassword = generateTempPassword();
 
@@ -43,7 +44,11 @@ export async function createMemberUser(
     });
   } catch (e) {
     if (e instanceof Error && e.message.includes("UNIQUE")) {
-      return { error: "Es existiert bereits ein User mit dieser E-Mail.", result: null };
+      return {
+        error: null,
+        fieldErrors: { email: "Es existiert bereits ein User mit dieser E-Mail." },
+        result: null,
+      };
     }
     return {
       error: e instanceof Error ? e.message : "Fehler beim Anlegen des Users.",

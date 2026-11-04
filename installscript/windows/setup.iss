@@ -17,11 +17,11 @@
 
 #define MyAppName "Abo-Tracker"
 ; Von aussen überschreibbar: der Release-Workflow gibt die Version des
-; gepushten v*-Tags mit "iscc /DMyAppVersion=1.9.4 ..." herein. Ohne das trug
+; gepushten v*-Tags mit "iscc /DMyAppVersion=1.10.0 ..." herein. Ohne das trug
 ; jede gebaute .exe die hier zuletzt von Hand gepflegte Nummer — ein Release
 ; v1.7.0 hätte sich in "Apps & Features" weiter als 1.6.5 eingetragen.
 #ifndef MyAppVersion
-  #define MyAppVersion "1.9.4"
+  #define MyAppVersion "1.10.0"
 #endif
 #define MyAppPublisher "Abo-Tracker"
 #define MyAppURL "https://github.com/CrazyJimPro/abo-tracker"

@@ -11,6 +11,13 @@ Preiserhöhungen auf einen Blick zu erkennen. Preisänderungen werden beim
 Bearbeiten eines Abos automatisch erfasst, ältere Preise lassen sich von Hand
 nachtragen.
 
+Unter **Benachrichtigungen** erinnert die App an anstehende Abrechnungen,
+auslaufende Aktionspreise und Kündigungsfristen: Mit „Vertrag läuft bis“ und
+„Kündigungsfrist“ (beides freiwillig) rechnet sie aus, bis wann spätestens
+gekündigt werden muss. Wie viele Tage im Voraus erinnert wird, stellt jeder
+unter **Einstellungen** selbst ein (3, 7, 14 oder 30 Tage). Pro Abo lässt sich
+außerdem die Zahlungsart festhalten und die Abo-Liste danach filtern.
+
 ## Installation, Sicherung und Update
 
 | | |

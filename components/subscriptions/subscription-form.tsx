@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,12 @@ import {
   validateFields,
 } from "@/lib/subscription-validation";
 import { NOTICE_UNIT_LABELS, cancelByDate } from "@/lib/contract";
+import { UnsavedChangesGuard } from "@/components/forms/unsaved-changes-guard";
+import {
+  COPY_SUBSCRIPTION_PATH,
+  storeSubscriptionCopy,
+  type SubscriptionDefaults,
+} from "@/components/subscriptions/subscription-copy";
 
 const initialState: ActionState = { error: null };
 
@@ -51,31 +58,24 @@ type CategoryOption = { id: string; name: string };
 
 export function SubscriptionForm({
   action,
-  duplicateAction,
+  duplicateFromId,
+  copyOf,
   categories,
   defaultValues,
   submitLabel,
 }: {
   action: (prevState: ActionState, formData: FormData) => Promise<ActionState>;
-  duplicateAction?: (prevState: ActionState, formData: FormData) => Promise<ActionState>;
+  // Bearbeiten-Seite: id des Abos, das "Duplizieren" als Vorlage weitergibt.
+  duplicateFromId?: string;
+  // Kopie-Seite: wohin "Abbrechen" zurückführt. Solange die Kopie nicht
+  // gespeichert ist, fragt die Seite beim Verlassen nach.
+  copyOf?: { cancelHref: string };
   categories: CategoryOption[];
-  defaultValues?: {
-    name: string;
-    amount: number;
-    billingInterval: string;
-    status: string;
-    categoryId: string | null;
-    nextBillingDate: string | null;
-    notes: string | null;
-    regularAmount: number | null;
-    introUntil: string | null;
-    contractEnd: string | null;
-    noticePeriod: number | null;
-    noticeUnit: string | null;
-    paymentMethod: string | null;
-  };
+  defaultValues?: SubscriptionDefaults;
   submitLabel: string;
 }) {
+  const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const [categoryValue, setCategoryValue] = useState(defaultValues?.categoryId ?? "none");
   const isNewCategory = categoryValue === "__new__";
   // Nur für den Hinweis "spätestens kündigen bis …" unter den Vertragsfeldern.
@@ -98,11 +98,7 @@ export function SubscriptionForm({
 
   const { isPending, pendingAction, errors, formMessage, formProps, clearError, invalid, labelClass } =
     useFieldForm<ActionState>({
-      action: (formData, submitter) => {
-        const submit =
-          submitter?.dataset.action === "duplicate" && duplicateAction ? duplicateAction : action;
-        return submit(initialState, formData);
-      },
+      action: (formData) => action(initialState, formData),
       validate: (formData) => {
         const found: Record<string, string> = validateFields(readSubscriptionFields(formData));
         if (isNewCategory && !(formData.get("new_category_name") as string)?.trim()) {
@@ -110,12 +106,37 @@ export function SubscriptionForm({
         }
         return found;
       },
-      // Nur Speichern kommt mit Erfolg zurück; Anlegen und Duplizieren leiten weiter.
+      // Nur Speichern kommt mit Erfolg zurück; Anlegen leitet weiter.
       onSuccess: () => toast.success("Gespeichert"),
     });
 
+  // Duplizieren speichert nichts: Die aktuellen Werte (auch noch nicht
+  // gespeicherte Änderungen) gehen an die Seite "Neues Abo", angelegt wird
+  // erst dort mit "Kopie speichern". Vorher entstand sofort ein zweiter,
+  // identischer Eintrag.
+  function duplicate() {
+    if (!formRef.current || !duplicateFromId) return;
+    const fields = readSubscriptionFields(new FormData(formRef.current));
+    storeSubscriptionCopy(duplicateFromId, {
+      ...fields,
+      name: fields.name ? `${fields.name} (Kopie)` : "",
+      amount: Number.isFinite(fields.amount) ? fields.amount : null,
+      // Eine hier erst angefangene neue Kategorie gibt es noch nicht.
+      categoryId: fields.categoryId === "__new__" ? null : fields.categoryId,
+    });
+    router.push(COPY_SUBSCRIPTION_PATH);
+  }
+
   return (
-    <form {...formProps} className="space-y-4">
+    <form {...formProps} ref={formRef} className="space-y-4">
+      {copyOf && (
+        <UnsavedChangesGuard
+          title="Die Kopie ist noch nicht gespeichert."
+          description="Wenn du die Seite jetzt verlässt, wird kein neues Abo angelegt."
+          saveLabel="Kopie speichern"
+          onSave={() => formRef.current?.requestSubmit()}
+        />
+      )}
       <div className="space-y-2">
         <Label htmlFor="name" className={labelClass("name")}>
           Name
@@ -144,7 +165,7 @@ export function SubscriptionForm({
             min="0"
             required
             aria-invalid={invalid("amount")}
-            defaultValue={defaultValues?.amount}
+            defaultValue={defaultValues?.amount ?? ""}
             placeholder="9.99"
           />
           <FieldError message={errors.amount} />
@@ -400,16 +421,26 @@ export function SubscriptionForm({
         <Button type="submit" disabled={isPending}>
           {pendingAction === "" ? "Speichern…" : submitLabel}
         </Button>
-        {duplicateAction && (
-          <Button type="submit" data-action="duplicate" variant="secondary" disabled={isPending}>
-            {pendingAction === "duplicate" ? "Wird angelegt…" : "Duplizieren"}
+        {duplicateFromId && (
+          <Button type="button" variant="secondary" disabled={isPending} onClick={duplicate}>
+            Duplizieren
+          </Button>
+        )}
+        {copyOf && (
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={isPending}
+            onClick={() => router.push(copyOf.cancelHref)}
+          >
+            Abbrechen
           </Button>
         )}
       </div>
-      {duplicateAction && (
+      {duplicateFromId && (
         <p className="text-xs text-muted-foreground">
-          Duplizieren legt ein neues Abo mit den obigen (auch geänderten) Werten an — das aktuelle
-          bleibt unverändert erhalten.
+          Duplizieren öffnet eine Kopie mit den obigen (auch geänderten) Werten. Angelegt wird sie
+          erst, wenn du dort auf „Kopie speichern“ klickst. Dieses Abo bleibt unverändert.
         </p>
       )}
     </form>

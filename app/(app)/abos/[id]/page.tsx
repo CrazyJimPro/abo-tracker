@@ -4,7 +4,6 @@ import { ArrowLeft } from "lucide-react";
 import { requireUser } from "@/lib/auth/guards";
 import { getSubscription, listVisibleCategories } from "@/lib/db/queries";
 import {
-  createSubscription,
   updateSubscription,
   deleteSubscription,
   markBilled,
@@ -48,7 +47,7 @@ export default async function SubscriptionDetailPage({
           <SubscriptionForm
             key={subscription.updatedAt}
             action={updateAction}
-            duplicateAction={createSubscription}
+            duplicateFromId={id}
             categories={categories}
             defaultValues={subscription}
             submitLabel="Speichern"

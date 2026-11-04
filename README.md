@@ -27,7 +27,9 @@ Beim Ausfüllen hilft die App mit: Fehlt in einem Formular etwas oder stimmt
 ein Wert nicht, wird das Feld rot umrandet und darunter steht, was fehlt.
 Alles bereits Eingetragene bleibt dabei stehen. Nach dem Speichern bestätigt
 eine kurze Meldung „Gespeichert“, und bevor ein Abo gelöscht wird, fragt die
-App noch einmal nach.
+App noch einmal nach. **Duplizieren** öffnet eine ausgefüllte Kopie, die erst mit „Kopie
+speichern“ angelegt wird. Wer die Kopie ohne Speichern verlassen will, wird
+gefragt, ob sie gespeichert werden soll.
 
 ## Installation, Sicherung und Update
 

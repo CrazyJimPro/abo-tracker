@@ -10,6 +10,7 @@ import {
   markBilled,
 } from "@/lib/actions/subscriptions";
 import { SubscriptionForm } from "@/components/subscriptions/subscription-form";
+import { DeleteSubscriptionButton } from "@/components/subscriptions/delete-subscription-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -61,11 +62,7 @@ export default async function SubscriptionDetailPage({
                 </Button>
               </form>
             )}
-            <form action={deleteAction}>
-              <Button type="submit" variant="outline" size="sm">
-                Abo löschen
-              </Button>
-            </form>
+            <DeleteSubscriptionButton name={subscription.name} action={deleteAction} />
           </div>
         </CardContent>
       </Card>

@@ -9,7 +9,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      // "midnight" ist ein eigenes dunkles Theme, das sonner nicht kennt.
+      theme={(theme === "midnight" ? "dark" : theme) as ToasterProps["theme"]}
       className="toaster group"
       icons={{
         success: (

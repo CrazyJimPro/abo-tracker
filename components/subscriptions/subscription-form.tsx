@@ -1,6 +1,7 @@
 "use client";
 
-import { startTransition, useActionState, useState } from "react";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -80,26 +81,13 @@ export function SubscriptionForm({
   };
   submitLabel: string;
 }) {
-  const [state, formAction, isPending] = useActionState(action, initialState);
-  const [duplicateState, duplicateFormAction, isDuplicatePending] = useActionState(
-    duplicateAction ?? action,
-    initialState
-  );
+  const [isPending, startSave] = useTransition();
+  const [isDuplicatePending, startDuplicate] = useTransition();
   const [categoryValue, setCategoryValue] = useState(defaultValues?.categoryId ?? "none");
   const isNewCategory = categoryValue === "__new__";
 
   const [errors, setErrors] = useState<SubscriptionFieldErrors>({});
   const [message, setMessage] = useState<string | null>(null);
-
-  // Übernimmt das Ergebnis der zuletzt fertig gewordenen Server-Action
-  // (Speichern oder Duplizieren) in die angezeigten Fehler.
-  const [seen, setSeen] = useState({ state, duplicateState });
-  if (seen.state !== state || seen.duplicateState !== duplicateState) {
-    const fresh = seen.state !== state ? state : duplicateState;
-    setSeen({ state, duplicateState });
-    setErrors(fresh.fieldErrors ?? {});
-    setMessage(fresh.fieldErrors ? null : fresh.error);
-  }
 
   const hasFieldErrors = Object.keys(errors).length > 0;
 
@@ -115,7 +103,10 @@ export function SubscriptionForm({
   // Bewusst kein <form action={…}>: React setzt ein Formular nach jeder
   // abgeschlossenen Action zurück, und dann wären bei einem Fehler alle
   // Eingaben weg. Hier wird die Action selbst aufgerufen, das Formular bleibt
-  // so stehen, wie es ausgefüllt wurde.
+  // so stehen, wie es ausgefüllt wurde. Auch kein useActionState: die
+  // Bearbeiten-Seite baut das Formular nach dem Speichern neu auf
+  // (key={updatedAt}), dessen Ergebnis käme dort nie an — der Code nach dem
+  // await hier läuft dagegen auf jeden Fall, die Meldung "Gespeichert" auch.
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const submitter = (e.nativeEvent as SubmitEvent).submitter;
@@ -135,9 +126,18 @@ export function SubscriptionForm({
 
     setErrors({});
     setMessage(null);
-    const dispatch =
-      submitter?.dataset.action === "duplicate" ? duplicateFormAction : formAction;
-    startTransition(() => dispatch(formData));
+    const isDuplicate = submitter?.dataset.action === "duplicate";
+    const run = isDuplicate ? startDuplicate : startSave;
+    const submit = isDuplicate && duplicateAction ? duplicateAction : action;
+    run(async () => {
+      // Anlegen und Duplizieren leiten bei Erfolg weiter und kommen hier
+      // nicht mit einem Ergebnis zurück; nur Speichern meldet { error: null }.
+      const result = await submit(initialState, formData);
+      if (!result) return;
+      setErrors(result.fieldErrors ?? {});
+      setMessage(result.fieldErrors ? null : result.error);
+      if (!result.error) toast.success("Gespeichert");
+    });
   }
 
   return (

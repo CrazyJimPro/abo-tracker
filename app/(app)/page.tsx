@@ -3,9 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { CategoryPieChart } from "@/components/dashboard/category-pie-chart";
 import { requireUser } from "@/lib/auth/guards";
-import { listActiveSubscriptions } from "@/lib/db/queries";
+import { listActiveSubscriptions, listSubscriptions } from "@/lib/db/queries";
 import { markBilled } from "@/lib/actions/subscriptions";
 import { monthlyAmount } from "@/lib/pricing";
+
+function formatEuro(value: number) {
+  return `${value.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+}
 
 export default async function Home() {
   const user = await requireUser();
@@ -13,6 +17,12 @@ export default async function Home() {
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const monthlyTotal = active.reduce((sum, s) => sum + monthlyAmount(s, todayStr), 0);
+  // Was gekündigte und pausierte Abos zuletzt monatlich gekostet hätten.
+  const inactive = [
+    ...listSubscriptions(user.id, { status: "cancelled" }),
+    ...listSubscriptions(user.id, { status: "paused" }),
+  ];
+  const savedMonthly = inactive.reduce((sum, s) => sum + monthlyAmount(s, todayStr), 0);
   const upcoming = active.filter((s) => s.nextBillingDate).slice(0, 5);
 
   const byCategory = new Map<string, { name: string; color: string; value: number }>();
@@ -42,13 +52,16 @@ export default async function Home() {
             <CardDescription>Hochgerechnet aus {active.length} aktiven Abo(s)</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-semibold">
-              {monthlyTotal.toLocaleString("de-DE", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}{" "}
-              €
+            <p className="text-3xl font-semibold">{formatEuro(monthlyTotal)}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Aufs Jahr gerechnet: {formatEuro(monthlyTotal * 12)}
             </p>
+            {savedMonthly > 0 && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                Gekündigt/pausiert ({inactive.length}): du sparst {formatEuro(savedMonthly)} im
+                Monat, {formatEuro(savedMonthly * 12)} im Jahr
+              </p>
+            )}
           </CardContent>
         </Card>
 

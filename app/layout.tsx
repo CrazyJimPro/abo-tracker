@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { PersistStorage } from "@/components/layout/persist-storage";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -48,6 +49,7 @@ export default function RootLayout({
             <div className="orb orb-3" />
           </div>
           {children}
+          <Toaster position="bottom-right" />
         </ThemeProvider>
       </body>
     </html>

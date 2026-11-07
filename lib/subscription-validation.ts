@@ -11,7 +11,7 @@ import type {
 // server" module to be an async function, so this plain validation/constant
 // logic has to live outside lib/actions/subscriptions.ts.
 
-export const BILLING_INTERVALS: BillingInterval[] = ["weekly", "monthly", "quarterly", "yearly"];
+export const BILLING_INTERVALS: BillingInterval[] = ["weekly", "monthly", "quarterly", "semiannual", "yearly"];
 export const STATUSES: SubscriptionStatus[] = ["active", "paused", "cancelled"];
 export const NOTICE_UNITS: NoticeUnit[] = ["days", "weeks", "months"];
 

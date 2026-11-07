@@ -38,6 +38,7 @@ const BILLING_INTERVAL_OPTIONS = [
   { value: "weekly", label: "Wöchentlich" },
   { value: "monthly", label: "Monatlich" },
   { value: "quarterly", label: "Vierteljährlich" },
+  { value: "semiannual", label: "Halbjährlich" },
   { value: "yearly", label: "Jährlich" },
 ];
 

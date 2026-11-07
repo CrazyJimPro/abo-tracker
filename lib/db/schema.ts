@@ -150,7 +150,7 @@ export const subscriptions = sqliteTable(
     ),
     check(
       "subscriptions_billing_interval_check",
-      sql`${t.billingInterval} in ('weekly', 'monthly', 'quarterly', 'yearly')`
+      sql`${t.billingInterval} in ('weekly', 'monthly', 'quarterly', 'semiannual', 'yearly')`
     ),
     check(
       "subscriptions_status_check",
@@ -192,7 +192,7 @@ export const priceHistory = sqliteTable(
 );
 
 export type UserRole = "admin" | "member";
-export type BillingInterval = "weekly" | "monthly" | "quarterly" | "yearly";
+export type BillingInterval = "weekly" | "monthly" | "quarterly" | "semiannual" | "yearly";
 export type SubscriptionStatus = "active" | "paused" | "cancelled";
 export type NoticeUnit = "days" | "weeks" | "months";
 export type PaymentMethod = "paypal" | "credit_card" | "direct_debit" | "bank_transfer" | "other";

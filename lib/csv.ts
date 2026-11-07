@@ -32,6 +32,7 @@ export const BILLING_INTERVAL_LABELS: Record<BillingInterval, string> = {
   weekly: "Wöchentlich",
   monthly: "Monatlich",
   quarterly: "Vierteljährlich",
+  semiannual: "Halbjährlich",
   yearly: "Jährlich",
 };
 

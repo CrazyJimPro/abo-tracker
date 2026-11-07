@@ -154,6 +154,9 @@ function advanceBillingDate(date: string, interval: BillingInterval): string {
     case "quarterly":
       d.setUTCMonth(d.getUTCMonth() + 3);
       break;
+    case "semiannual":
+      d.setUTCMonth(d.getUTCMonth() + 6);
+      break;
     case "yearly":
       d.setUTCFullYear(d.getUTCFullYear() + 1);
       break;

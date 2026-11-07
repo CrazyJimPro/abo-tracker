@@ -5,6 +5,7 @@ export const MONTHLY_FACTOR: Record<BillingInterval, number> = {
   weekly: 52 / 12,
   monthly: 1,
   quarterly: 1 / 3,
+  semiannual: 1 / 6,
   yearly: 1 / 12,
 };
 

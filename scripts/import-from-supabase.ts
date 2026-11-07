@@ -120,7 +120,7 @@ async function main() {
         categoryId: s.category_id,
         name: s.name,
         amount: Number(s.amount),
-        billingInterval: s.billing_interval as "weekly" | "monthly" | "quarterly" | "yearly",
+        billingInterval: s.billing_interval as "weekly" | "monthly" | "quarterly" | "semiannual" | "yearly",
         status: s.status as "active" | "paused" | "cancelled",
         nextBillingDate: s.next_billing_date,
         notes: s.notes,

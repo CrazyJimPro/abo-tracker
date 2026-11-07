@@ -21,7 +21,9 @@ auslaufende Aktionspreise und Kündigungsfristen: Mit „Vertrag läuft bis“ u
 gekündigt werden muss. Wie viele Tage im Voraus erinnert wird, stellt jeder
 unter **Einstellungen** selbst ein (3, 7, 14 oder 30 Tage). Pro Abo lässt sich
 außerdem die Zahlungsart festhalten (PayPal, Kreditkarte, Lastschrift,
-Überweisung/Rechnung, Sonstiges) und die Abo-Liste danach filtern.
+Überweisung/Rechnung, Sonstiges) und die Abo-Liste danach filtern. Als
+Zahlungsintervall stehen wöchentlich, monatlich, vierteljährlich, halbjährlich
+und jährlich zur Wahl.
 
 Beim Ausfüllen hilft die App mit: Fehlt in einem Formular etwas oder stimmt
 ein Wert nicht, wird das Feld rot umrandet und darunter steht, was fehlt.

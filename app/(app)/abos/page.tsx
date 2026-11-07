@@ -12,6 +12,7 @@ const INTERVAL_LABELS: Record<string, string> = {
   weekly: "wöchentlich",
   monthly: "monatlich",
   quarterly: "vierteljährlich",
+  semiannual: "halbjährlich",
   yearly: "jährlich",
 };
 

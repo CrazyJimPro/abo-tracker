@@ -54,6 +54,12 @@ test("Export aus der App wird unverändert wieder gelesen", () => {
   assert.equal(paymentMethodFromLabel(raw["Zahlungsart"]), "bank_transfer");
 });
 
+test("billingIntervalFromLabel kennt alle Intervalle", () => {
+  assert.equal(billingIntervalFromLabel("Halbjährlich"), "semiannual");
+  assert.equal(billingIntervalFromLabel("Vierteljährlich"), "quarterly");
+  assert.equal(billingIntervalFromLabel("Zweijährlich"), null);
+});
+
 test("paymentMethodFromLabel", () => {
   assert.equal(paymentMethodFromLabel("PayPal"), "paypal");
   assert.equal(paymentMethodFromLabel(" "), null);
